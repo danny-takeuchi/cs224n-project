@@ -1467,20 +1467,20 @@ class BiDAF(nn.Module):
                                    # hidden_size=hidden_size,
                                     #drop_prob=drop_prob)
 
-        self.enc = layers.RNNEncoder(input_size=hidden_size,
+        self.enc = RNNEncoder(input_size=hidden_size,
                                      hidden_size=hidden_size,
                                      num_layers=1,
                                      drop_prob=drop_prob)
 
-        self.att = layers.BiDAFAttention(hidden_size=2 * hidden_size,
+        self.att = BiDAFAttention(hidden_size=2 * hidden_size,
                                          drop_prob=drop_prob)
 
-        self.mod = layers.RNNEncoder(input_size=8 * hidden_size,
+        self.mod = RNNEncoder(input_size=8 * hidden_size,
                                      hidden_size=hidden_size,
                                      num_layers=2,
                                      drop_prob=drop_prob)
 
-        self.out = layers.BiDAFOutput(hidden_size=hidden_size,
+        self.out = BiDAFOutput(hidden_size=hidden_size,
                                       drop_prob=drop_prob)
 
     def forward(self, question_emb, context_emb, question_mask, context_mask, question_len, context_len):
@@ -1553,13 +1553,13 @@ class BertForQuestionAnsweringBidaf(BertPreTrainedModel):
     ```
     """
     def __init__(self, config):
-        super(BertForQuestionAnswering, self).__init__(config)
+        super(BertForQuestionAnsweringBidaf, self).__init__(config)
         self.bert = BertModel(config)
         # TODO check with Google if it's normal there is no dropout on the token classifier of SQuAD in the TF version
         # self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.qa_outputs = nn.Linear(config.hidden_size, 2)
         self.apply(self.init_bert_weights)
-        self.bidaf = models.BiDAF(config.hidden_size)
+        self.bidaf = BiDAF(config.hidden_size)
 
 
     def forward(self, max_seq_length, max_query_length, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None):

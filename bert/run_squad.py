@@ -917,13 +917,15 @@ def main():
     # Prepare model
     if args.improvement == 0:
         model = BertForQuestionAnswering.from_pretrained(args.bert_model,
-                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE, 'distributed_{}'.format(args.local_rank)))
+                    cache_dir=os.path.join(str(PYTORCH_PRETRAINED_BERT_CACHE), 'distributed_{}'.format(args.local_rank)))
+
     elif args.improvement == 1:
-        BertForQuestionAnsweringWHL.from_pretrained(args.bert_model,
-                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE, 'distributed_{}'.format(args.local_rank)))
+        model = BertForQuestionAnsweringWHL.from_pretrained(args.bert_model,
+                    cache_dir=os.path.join(str(PYTORCH_PRETRAINED_BERT_CACHE), 'distributed_{}'.format(args.local_rank)))
+
     elif args.improvement == 2:
-        BertForQuestionAnsweringBidaf.from_pretrained(args.bert_model,
-                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE, 'distributed_{}'.format(args.local_rank)))
+        model = BertForQuestionAnsweringBidaf.from_pretrained(args.bert_model,
+                    cache_dir=os.path.join(str(PYTORCH_PRETRAINED_BERT_CACHE), 'distributed_{}'.format(args.local_rank)))
 
     if args.fp16:
         model.half()
