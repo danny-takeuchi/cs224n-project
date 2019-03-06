@@ -272,18 +272,6 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             tokens.append("[SEP]")
             segment_ids.append(0)
 
-            input_ids = tokenizer.convert_tokens_to_ids(tokens)
-            input_mask = [1] * len(input_ids)
-            num_query_pad = max_query_length - len(query_tokens)
-
-            #perform padding for the question
-            for i in range(num_query_pad):
-                input_ids.append(0)
-                input_mask.append(0)
-                segment_ids.append(0)
-
-            tokens = []
-
             for i in range(doc_span.length):
                 split_token_index = doc_span.start + i
                 token_to_orig_map[len(tokens)] = tok_to_orig_index[split_token_index]
@@ -293,19 +281,50 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 token_is_max_context[len(tokens)] = is_max_context
                 tokens.append(all_doc_tokens[split_token_index])
                 segment_ids.append(1)
-                input_mask.append(1)
-
             tokens.append("[SEP]")
             segment_ids.append(1)
-            input_mask.append(1)
 
-            input_ids = input_ids + tokenizer.convert_tokens_to_ids(tokens)
-            #input_ids = tokenizer.convert_tokens_to_ids(tokens)
+            input_ids = tokenizer.convert_tokens_to_ids(tokens)
 
             # The mask has 1 for real tokens and 0 for padding tokens. Only real
             # tokens are attended to.
-            #original code -->
-            #input_mask = [1] * len(input_ids)
+            input_mask = [1] * len(input_ids)
+
+            #KEVIN'S Version
+            # input_ids = tokenizer.convert_tokens_to_ids(tokens)
+            # input_mask = [1] * len(input_ids)
+            # num_query_pad = max_query_length - len(query_tokens)
+            #
+            # #perform padding for the question
+            # for i in range(num_query_pad):
+            #     input_ids.append(0)
+            #     input_mask.append(0)
+            #     segment_ids.append(0)
+            #
+            # tokens = []
+            #
+            # for i in range(doc_span.length):
+            #     split_token_index = doc_span.start + i
+            #     token_to_orig_map[len(tokens)] = tok_to_orig_index[split_token_index]
+            #
+            #     is_max_context = _check_is_max_context(doc_spans, doc_span_index,
+            #                                            split_token_index)
+            #     token_is_max_context[len(tokens)] = is_max_context
+            #     tokens.append(all_doc_tokens[split_token_index])
+            #     segment_ids.append(1)
+            #     input_mask.append(1)
+            #
+            # tokens.append("[SEP]")
+            # segment_ids.append(1)
+            # input_mask.append(1)
+            #
+            # input_ids = input_ids + tokenizer.convert_tokens_to_ids(tokens)
+            # #input_ids = tokenizer.convert_tokens_to_ids(tokens)
+            #
+            # # The mask has 1 for real tokens and 0 for padding tokens. Only real
+            # # tokens are attended to.
+            # #original code -->
+            # #input_mask = [1] * len(input_ids)
 
             # Zero-pad up to the sequence length.
             while len(input_ids) < max_seq_length:
