@@ -609,6 +609,8 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
 
         total_scores = []
         best_non_null_entry = None
+        print("----------------nbest-----------------")
+        print(nbest)
         for entry in nbest:
             total_scores.append(entry.start_logit + entry.end_logit)
             if not best_non_null_entry:
@@ -1059,13 +1061,17 @@ def main():
             model = BertForQuestionAnsweringWHL(config)
         elif args.improvement == 2:
             model = BertForQuestionAnsweringBidaf(config)
-
         model.load_state_dict(torch.load(output_model_file))
     else:
         if args.improvement == 0:
             model = BertForQuestionAnswering.from_pretrained(args.bert_model)
+            output_model_file = "../debug_squad2/pytorch_model.bin"
+            model.load_state_dict(torch.load(output_model_file))
         elif args.improvement == 1:
+	    
             model = BertForQuestionAnsweringWHL.from_pretrained(args.bert_model)
+            output_model_file = "../debug_squad_WHL/pytorch_model.bin"
+            model.load_state_dict(torch.load(output_model_file))
         elif args.improvement == 2:
             model = BertForQuestionAnsweringBidaf.from_pretrained(args.bert_model)
 
