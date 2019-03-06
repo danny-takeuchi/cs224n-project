@@ -35,7 +35,7 @@ from torch.utils.data.distributed import DistributedSampler
 from tqdm import tqdm, trange
 
 from pytorch_pretrained_bert.file_utils import PYTORCH_PRETRAINED_BERT_CACHE
-from pytorch_pretrained_bert.modeling import BertForQuestionAnswering, BertConfig, WEIGHTS_NAME, CONFIG_NAME
+from pytorch_pretrained_bert.modeling import BertForQuestionAnswering, BertForQuestionAnsweringWHL, BertForQuestionAnsweringBidaf, BertConfig, WEIGHTS_NAME, CONFIG_NAME
 from pytorch_pretrained_bert.optimization import BertAdam, warmup_linear
 from pytorch_pretrained_bert.tokenization import (BasicTokenizer,
                                                   BertTokenizer,
@@ -276,7 +276,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             input_mask = [1] * len(input_ids)
             num_query_pad = max_query_length - len(query_tokens)
 
-            #perform padding for the question 
+            #perform padding for the question
             for i in range(num_query_pad):
                 input_ids.append(0)
                 input_mask.append(0)
@@ -304,7 +304,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
 
             # The mask has 1 for real tokens and 0 for padding tokens. Only real
             # tokens are attended to.
-            #original code --> 
+            #original code -->
             #input_mask = [1] * len(input_ids)
 
             # Zero-pad up to the sequence length.
@@ -592,13 +592,13 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
                         text="",
                         start_logit=null_start_logit,
                         end_logit=null_end_logit))
-                
+
             # In very rare edge cases we could only have single null prediction.
             # So we just create a nonce prediction in this case to avoid failure.
             if len(nbest)==1:
                 nbest.insert(0,
                     _NbestPrediction(text="empty", start_logit=0.0, end_logit=0.0))
-                
+
         # In very rare edge cases we could have no valid predictions. So we
         # just create a nonce prediction in this case to avoid failure.
         if not nbest:
@@ -856,6 +856,9 @@ def main():
     parser.add_argument('--null_score_diff_threshold',
                         type=float, default=0.0,
                         help="If null_score - best_non_null is greater than the threshold predict null.")
+    parser.add_argument('--improvement',
+                        type=float, default=0.0,
+                        help="Which tweak to the baseline Bert model to run.")
     args = parser.parse_args()
 
     if args.local_rank == -1 or args.no_cuda:
@@ -912,8 +915,15 @@ def main():
             num_train_optimization_steps = num_train_optimization_steps // torch.distributed.get_world_size()
 
     # Prepare model
-    model = BertForQuestionAnswering.from_pretrained(args.bert_model,
-                cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE, 'distributed_{}'.format(args.local_rank)))
+    if args.improvement == 0:
+        model = BertForQuestionAnswering.from_pretrained(args.bert_model,
+                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE, 'distributed_{}'.format(args.local_rank)))
+    elif args.improvement == 1:
+        BertForQuestionAnsweringWHL.from_pretrained(args.bert_model,
+                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE, 'distributed_{}'.format(args.local_rank)))
+    elif args.improvement == 2:
+        BertForQuestionAnsweringBidaf.from_pretrained(args.bert_model,
+                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE, 'distributed_{}'.format(args.local_rank)))
 
     if args.fp16:
         model.half()
@@ -1039,10 +1049,25 @@ def main():
 
         # Load a trained model and config that you have fine-tuned
         config = BertConfig(output_config_file)
+
+        if args.improvement == 0:
+            model = BertForQuestionAnswering(config)
+        elif args.improvement == 1:
+            model = BertForQuestionAnsweringWHL(config)
+        elif args.improvement == 2:
+            model = BertForQuestionAnsweringBidaf(config)
+
+
         model = BertForQuestionAnswering(config)
         model.load_state_dict(torch.load(output_model_file))
     else:
-        model = BertForQuestionAnswering.from_pretrained(args.bert_model)
+        if args.improvement == 0:
+            model = BertForQuestionAnswering.from_pretrained(args.bert_model)
+        elif args.improvement == 1:
+            model = BertForQuestionAnsweringWHL.from_pretrained(args.bert_model)
+        elif args.improvement == 2:
+            model = BertForQuestionAnsweringBidaf.from_pretrained(args.bert_model)
+
 
     model.to(device)
 
