@@ -26,6 +26,7 @@ import shutil
 import tarfile
 import tempfile
 import sys
+import models
 from io import open
 
 import torch
@@ -1121,7 +1122,7 @@ class BertForTokenClassification(BertPreTrainedModel):
             return logits
 
 
-class BertForQuestionAnswering(BertPreTrainedModel):
+class BertForQuestionAnsweringBidaf(BertPreTrainedModel):
     """BERT model for Question Answering (span extraction).
     This module is composed of the BERT model with a linear layer on top of
     the sequence output that computes start_logits and end_logits
@@ -1175,13 +1176,31 @@ class BertForQuestionAnswering(BertPreTrainedModel):
         # self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.qa_outputs = nn.Linear(config.hidden_size, 2)
         self.apply(self.init_bert_weights)
+        self.bidaf = models.BiDAF(config.hidden_size)
 
-    def forward(self, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None):
+
+    def forward(self, max_seq_length, max_query_length, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None):
         sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
-        logits = self.qa_outputs(sequence_output)
-        start_logits, end_logits = logits.split(1, dim=-1)
-        start_logits = start_logits.squeeze(-1)
-        end_logits = end_logits.squeeze(-1)
+        #sequence_output is of shape (batch_size, sequence_length, hidden_size)
+        #find out where we separate the question/context hidden states (add 2 for the CLS and SEP tokens)
+        question_end_index = max_query_length + 2 
+        
+        question_output = sequence_output[:,:question_end_index,:]
+        context_output = sequence_output[:,question_end_index:,:]
+
+        question_mask = attention_mask[:question_end_index,:]
+        context_mask = attention_mask[question_end_index:,:]
+
+        batch_size = attention_mask.shape[0]
+        question_len = [question_end_index] * batch_size  
+        context_len = [max_seq_length - max_query_length - 2] * batch_size
+
+        start_logits, end_logits = self.bidaf(question_output, context_output, question_mask, context_mask, question_len, context_len)
+
+        #logits = self.qa_outputs(sequence_output)
+        #start_logits, end_logits = logits.split(1, dim=-1)
+        #start_logits = start_logits.squeeze(-1)
+        #end_logits = end_logits.squeeze(-1)
 
         if start_positions is not None and end_positions is not None:
             # If we are on multi-GPU, split add a dimension
