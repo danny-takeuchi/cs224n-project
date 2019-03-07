@@ -33,6 +33,8 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.nn import CrossEntropyLoss
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+
 
 from .file_utils import cached_path
 
@@ -1496,8 +1498,7 @@ class BiDAF(nn.Module):
         c_enc = self.enc(context_emb, context_len)    # (batch_size, c_len, 2 * hidden_size)
         q_enc = self.enc(question_emb, question_len)    # (batch_size, q_len, 2 * hidden_size)
 
-        att = self.att(c_enc, q_enc,
-                       context_mask, question_mask)    # (batch_size, c_len, 8 * hidden_size)
+        att = self.att(c_enc, q_enc, context_mask, question_mask)    # (batch_size, c_len, 8 * hidden_size)
 
         mod = self.mod(att, context_len)        # (batch_size, c_len, 2 * hidden_size)
 
@@ -1576,8 +1577,8 @@ class BertForQuestionAnsweringBidaf(BertPreTrainedModel):
         context_mask = attention_mask[question_end_index:,:]
 
         batch_size = attention_mask.shape[0]
-        question_len = [question_end_index] * batch_size
-        context_len = [max_seq_length - max_query_length - 2] * batch_size
+        question_len = torch.tensor([question_end_index] * batch_size)
+        context_len = torch.tensor([max_seq_length - max_query_length - 2] * batch_size)
 
         start_logits, end_logits = self.bidaf(question_output, context_output, question_mask, context_mask, question_len, context_len)
 
