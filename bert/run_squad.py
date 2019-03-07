@@ -35,7 +35,7 @@ from torch.utils.data.distributed import DistributedSampler
 from tqdm import tqdm, trange
 
 from pytorch_pretrained_bert.file_utils import PYTORCH_PRETRAINED_BERT_CACHE
-from pytorch_pretrained_bert.modeling import BertForQuestionAnswering, BertForQuestionAnsweringWHL, BertForQuestionAnsweringBidaf, BertConfig, WEIGHTS_NAME, CONFIG_NAME
+from pytorch_pretrained_bert.modeling import BertForQuestionAnswering, BertForQuestionAnsweringWHL, BertConfig, WEIGHTS_NAME, CONFIG_NAME
 from pytorch_pretrained_bert.optimization import BertAdam, warmup_linear
 from pytorch_pretrained_bert.tokenization import (BasicTokenizer,
                                                   BertTokenizer,
@@ -242,9 +242,6 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
         # The -3 accounts for [CLS], [SEP] and [SEP]
         max_tokens_for_doc = max_seq_length - len(query_tokens) - 3
 
-        #KEVIN'S Version
-        #max_tokens_for_doc = max_seq_length - max_query_length - 3
-
         # Modification: query will be padded at a later step to max_query_length
         # We can have documents that are longer than the maximum sequence length.
         # To deal with this we do a sliding window approach, where we take chunks
@@ -292,42 +289,6 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             # The mask has 1 for real tokens and 0 for padding tokens. Only real
             # tokens are attended to.
             input_mask = [1] * len(input_ids)
-
-            #KEVIN'S Version
-            # input_ids = tokenizer.convert_tokens_to_ids(tokens)
-            # input_mask = [1] * len(input_ids)
-            # num_query_pad = max_query_length - len(query_tokens)
-            #
-            # #perform padding for the question
-            # for i in range(num_query_pad):
-            #     input_ids.append(0)
-            #     input_mask.append(0)
-            #     segment_ids.append(0)
-            #
-            # tokens = []
-            #
-            # for i in range(doc_span.length):
-            #     split_token_index = doc_span.start + i
-            #     token_to_orig_map[len(tokens)] = tok_to_orig_index[split_token_index]
-            #
-            #     is_max_context = _check_is_max_context(doc_spans, doc_span_index,
-            #                                            split_token_index)
-            #     token_is_max_context[len(tokens)] = is_max_context
-            #     tokens.append(all_doc_tokens[split_token_index])
-            #     segment_ids.append(1)
-            #     input_mask.append(1)
-            #
-            # tokens.append("[SEP]")
-            # segment_ids.append(1)
-            # input_mask.append(1)
-            #
-            # input_ids = input_ids + tokenizer.convert_tokens_to_ids(tokens)
-            # #input_ids = tokenizer.convert_tokens_to_ids(tokens)
-            #
-            # # The mask has 1 for real tokens and 0 for padding tokens. Only real
-            # # tokens are attended to.
-            # #original code -->
-            # #input_mask = [1] * len(input_ids)
 
             # Zero-pad up to the sequence length.
             while len(input_ids) < max_seq_length:
@@ -948,9 +909,6 @@ def main():
     elif args.improvement == 1:
         model = BertForQuestionAnsweringWHL.from_pretrained(args.bert_model,
                     cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE, 'distributed_{}'.format(args.local_rank)))
-    elif args.improvement == 2:
-        model = BertForQuestionAnsweringBidaf.from_pretrained(args.bert_model,
-                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE, 'distributed_{}'.format(args.local_rank)))
 
     if args.fp16:
         model.half()
@@ -1043,11 +1001,7 @@ def main():
                 if n_gpu == 1:
                     batch = tuple(t.to(device) for t in batch) # multi-gpu does scattering it-self
                 input_ids, input_mask, segment_ids, start_positions, end_positions = batch
-
-                if args.improvement == 2:
-                    loss = model(args.max_seq_length, args.max_query_length,input_ids, segment_ids, input_mask, start_positions, end_positions)
-                else:
-                    loss = model(input_ids, segment_ids, input_mask, start_positions, end_positions)
+                loss = model(input_ids, segment_ids, input_mask, start_positions, end_positions)
                 if n_gpu > 1:
                     loss = loss.mean() # mean() to average on multi-gpu.
                 if args.gradient_accumulation_steps > 1:
@@ -1084,8 +1038,6 @@ def main():
             model = BertForQuestionAnswering(config)
         elif args.improvement == 1:
             model = BertForQuestionAnsweringWHL(config)
-        elif args.improvement == 2:
-            model = BertForQuestionAnsweringBidaf(config)
         model.load_state_dict(torch.load(output_model_file))
     else:
         if args.improvement == 0:
@@ -1096,8 +1048,6 @@ def main():
             model = BertForQuestionAnsweringWHL.from_pretrained(args.bert_model)
             output_model_file = "../debug_squad_WHL/pytorch_model.bin"
             model.load_state_dict(torch.load(output_model_file))
-        elif args.improvement == 2:
-            model = BertForQuestionAnsweringBidaf.from_pretrained(args.bert_model)
 
 
     model.to(device)
@@ -1137,10 +1087,7 @@ def main():
             input_mask = input_mask.to(device)
             segment_ids = segment_ids.to(device)
             with torch.no_grad():
-                if args.improvement == 2:
-                    batch_start_logits, batch_end_logits = model(args.max_seq_length, args.max_query_length, input_ids, segment_ids, input_mask)
-                else:
-                    batch_start_logits, batch_end_logits = model(input_ids, segment_ids, input_mask)
+                batch_start_logits, batch_end_logits = model(input_ids, segment_ids, input_mask)
             for i, example_index in enumerate(example_indices):
                 start_logits = batch_start_logits[i].detach().cpu().tolist()
                 end_logits = batch_end_logits[i].detach().cpu().tolist()

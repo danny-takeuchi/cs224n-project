@@ -883,9 +883,6 @@ def main():
     parser.add_argument('--null_score_diff_threshold',
                         type=float, default=0.0,
                         help="If null_score - best_non_null is greater than the threshold predict null.")
-    parser.add_argument('--improvement',
-                        type=float, default=0.0,
-                        help="Which tweak to the baseline Bert model to run.")
     args = parser.parse_args()
 
     if args.local_rank == -1 or args.no_cuda:
@@ -942,14 +939,7 @@ def main():
             num_train_optimization_steps = num_train_optimization_steps // torch.distributed.get_world_size()
 
     # Prepare model
-    if args.improvement == 0:
-        model = BertForQuestionAnswering.from_pretrained(args.bert_model,
-                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE, 'distributed_{}'.format(args.local_rank)))
-    elif args.improvement == 1:
-        model = BertForQuestionAnsweringWHL.from_pretrained(args.bert_model,
-                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE, 'distributed_{}'.format(args.local_rank)))
-    elif args.improvement == 2:
-        model = BertForQuestionAnsweringBidaf.from_pretrained(args.bert_model,
+    model = BertForQuestionAnsweringBidaf.from_pretrained(args.bert_model,
                     cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE, 'distributed_{}'.format(args.local_rank)))
 
     if args.fp16:
@@ -1044,10 +1034,7 @@ def main():
                     batch = tuple(t.to(device) for t in batch) # multi-gpu does scattering it-self
                 input_ids, input_mask, segment_ids, start_positions, end_positions = batch
 
-                if args.improvement == 2:
-                    loss = model(args.max_seq_length, args.max_query_length,input_ids, segment_ids, input_mask, start_positions, end_positions)
-                else:
-                    loss = model(input_ids, segment_ids, input_mask, start_positions, end_positions)
+                loss = model(args.max_seq_length, args.max_query_length,input_ids, segment_ids, input_mask, start_positions, end_positions)
                 if n_gpu > 1:
                     loss = loss.mean() # mean() to average on multi-gpu.
                 if args.gradient_accumulation_steps > 1:
@@ -1080,24 +1067,10 @@ def main():
         # Load a trained model and config that you have fine-tuned
         config = BertConfig(output_config_file)
 
-        if args.improvement == 0:
-            model = BertForQuestionAnswering(config)
-        elif args.improvement == 1:
-            model = BertForQuestionAnsweringWHL(config)
-        elif args.improvement == 2:
-            model = BertForQuestionAnsweringBidaf(config)
+        model = BertForQuestionAnsweringBidaf(config)
         model.load_state_dict(torch.load(output_model_file))
     else:
-        if args.improvement == 0:
-            model = BertForQuestionAnswering.from_pretrained(args.bert_model)
-            output_model_file = "../debug_squad2/pytorch_model.bin"
-            model.load_state_dict(torch.load(output_model_file))
-        elif args.improvement == 1:
-            model = BertForQuestionAnsweringWHL.from_pretrained(args.bert_model)
-            output_model_file = "../debug_squad_WHL/pytorch_model.bin"
-            model.load_state_dict(torch.load(output_model_file))
-        elif args.improvement == 2:
-            model = BertForQuestionAnsweringBidaf.from_pretrained(args.bert_model)
+        model = BertForQuestionAnsweringBidaf.from_pretrained(args.bert_model)
 
 
     model.to(device)
@@ -1137,10 +1110,7 @@ def main():
             input_mask = input_mask.to(device)
             segment_ids = segment_ids.to(device)
             with torch.no_grad():
-                if args.improvement == 2:
-                    batch_start_logits, batch_end_logits = model(args.max_seq_length, args.max_query_length, input_ids, segment_ids, input_mask)
-                else:
-                    batch_start_logits, batch_end_logits = model(input_ids, segment_ids, input_mask)
+                batch_start_logits, batch_end_logits = model(args.max_seq_length, args.max_query_length, input_ids, segment_ids, input_mask)
             for i, example_index in enumerate(example_indices):
                 start_logits = batch_start_logits[i].detach().cpu().tolist()
                 end_logits = batch_end_logits[i].detach().cpu().tolist()
