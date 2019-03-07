@@ -487,17 +487,19 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
         min_null_feature_index = 0  # the paragraph slice with min mull score
         null_start_logit = 0  # the start logit at the slice with min null score
         null_end_logit = 0  # the end logit at the slice with min null score
+        count = 0
         for (feature_index, feature) in enumerate(features):
             result = unique_id_to_result[feature.unique_id]
-            # count = 0
-            # if not isinstance(result.start_logits, list) or not isinstance(result.end_logits, list):
-            #     count +=1
-            #     print("-----------------ERROR---------------" + str(count))
-            #     continue
+            if not isinstance(result.start_logits, list) or not isinstance(result.end_logits, list):
+                count +=1
+                print("-----------------ERROR---------------" + str(count))
+                continue
             start_indexes = _get_best_indexes(result.start_logits, n_best_size)
             end_indexes = _get_best_indexes(result.end_logits, n_best_size)
             # if we could have irrelevant answers, get the min score of irrelevant
             if version_2_with_negative:
+                print("-----------------START LOGITS----------------------")
+                print(result.start_logits)
                 feature_null_score = result.start_logits[0] + result.end_logits[0]
                 if feature_null_score < score_null:
                     score_null = feature_null_score
