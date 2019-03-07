@@ -33,6 +33,8 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.nn import CrossEntropyLoss
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+
 
 from .file_utils import cached_path
 
@@ -1576,8 +1578,8 @@ class BertForQuestionAnsweringBidaf(BertPreTrainedModel):
         context_mask = attention_mask[question_end_index:,:]
 
         batch_size = attention_mask.shape[0]
-        question_len = [question_end_index] * batch_size
-        context_len = [max_seq_length - max_query_length - 2] * batch_size
+        question_len = torch.tensor([question_end_index] * batch_size)
+        context_len = torch.tensor([max_seq_length - max_query_length - 2] * batch_size)
 
         start_logits, end_logits = self.bidaf(question_output, context_output, question_mask, context_mask, question_len, context_len)
 
