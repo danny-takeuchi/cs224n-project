@@ -1489,7 +1489,7 @@ class BiDAF(nn.Module):
         #q_mask = torch.zeros_like(qw_idxs) != qw_idxs
         #c_len, q_len = c_mask.sum(-1), q_mask.sum(-1)
 
-       #won't be using the embeddings for now 
+       #won't be using the embeddings for now
        #c_emb = self.emb(cw_idxs)         # (batch_size, c_len, hidden_size)
        #q_emb = self.emb(qw_idxs)         # (batch_size, q_len, hidden_size)
 
@@ -1564,11 +1564,11 @@ class BertForQuestionAnsweringBidaf(BertPreTrainedModel):
 
     def forward(self, max_seq_length, max_query_length, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None):
         sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
-        
+
         #sequence_output is of shape (batch_size, sequence_length, hidden_size)
         #find out where we separate the question/context hidden states (add 2 for the CLS and SEP tokens)
-        question_end_index = max_query_length + 2 
-        
+        question_end_index = max_query_length + 2
+
         question_output = sequence_output[:,:question_end_index,:]
         context_output = sequence_output[:,question_end_index:,:]
 
@@ -1576,7 +1576,7 @@ class BertForQuestionAnsweringBidaf(BertPreTrainedModel):
         context_mask = attention_mask[question_end_index:,:]
 
         batch_size = attention_mask.shape[0]
-        question_len = [question_end_index] * batch_size  
+        question_len = [question_end_index] * batch_size
         context_len = [max_seq_length - max_query_length - 2] * batch_size
 
         start_logits, end_logits = self.bidaf(question_output, context_output, question_mask, context_mask, question_len, context_len)
