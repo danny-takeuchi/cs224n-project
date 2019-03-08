@@ -35,7 +35,7 @@ from torch.utils.data.distributed import DistributedSampler
 
 from tqdm import tqdm, trange
 from pytorch_pretrained_bert.file_utils import PYTORCH_PRETRAINED_BERT_CACHE
-from pytorch_pretrained_bert.modeling import BertForQuestionAnswering, BertForQuestionAnsweringWHL, BertConfig, WEIGHTS_NAME, CONFIG_NAME
+from pytorch_pretrained_bert.modeling import BertForQuestionAnswering, BertForQuestionAnsweringWHL, BertForQuestionAnsweringHighway, BertConfig, WEIGHTS_NAME, CONFIG_NAME
 from pytorch_pretrained_bert.optimization import BertAdam, warmup_linear
 from pytorch_pretrained_bert.tokenization import (BasicTokenizer,
                                                   BertTokenizer,
@@ -910,6 +910,10 @@ def main():
         model = BertForQuestionAnsweringWHL.from_pretrained(args.bert_model,
                     cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE, 'distributed_{}'.format(args.local_rank)))
 
+    elif args.improvement == 2:
+        model = BertForQuestionAnsweringHighway.from_pretrained(args.bert_model,
+                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE,'distributed_{}'.format(args.local_rank)))
+
     if args.fp16:
         model.half()
     model.to(device)
@@ -1038,6 +1042,8 @@ def main():
             model = BertForQuestionAnswering(config)
         elif args.improvement == 1:
             model = BertForQuestionAnsweringWHL(config)
+        elif args.improvement == 2:
+            model = BertForQuestionAnsweringHighway(config)
         model.load_state_dict(torch.load(output_model_file))
     else:
         if args.improvement == 0:
@@ -1047,6 +1053,10 @@ def main():
         elif args.improvement == 1:
             model = BertForQuestionAnsweringWHL.from_pretrained(args.bert_model)
             output_model_file = "../debug_squad_WHL/pytorch_model.bin"
+            model.load_state_dict(torch.load(output_model_file))
+        elif args.improvement == 2:
+            model = BertForQuestionAnsweringHighway.from_pretrained(args.bert_model)
+            output_model_file = os.path.join(args.output_dir, WEIGHTS_NAME)
             model.load_state_dict(torch.load(output_model_file))
 
 
