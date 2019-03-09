@@ -112,9 +112,9 @@ def AAScore(filepath):
     return 1 - numWrongAnswers / numAnswers
 
 # writeCleanDevQuestionsJson()
-# jsonToCSV()
+jsonToCSV()
 # writeCleanDevJson()
-filepath = "../debug_squad_WHL/dev_submission.csv"
+filepath = "dev_submission.csv"
 print("getAnsweredNonanswersScore: " + str(ANaScore(filepath)))
 print("getNonansweredAnswersScore: " + str(NaAScore(filepath)))
 print("WrongAnswersScore: " + str(AAScore(filepath)))

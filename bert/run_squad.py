@@ -35,7 +35,7 @@ from torch.utils.data.distributed import DistributedSampler
 
 from tqdm import tqdm, trange
 from pytorch_pretrained_bert.file_utils import PYTORCH_PRETRAINED_BERT_CACHE
-from pytorch_pretrained_bert.modeling import BertForQuestionAnswering, BertForQuestionAnsweringWHL, BertForQuestionAnsweringHighway, BertConfig, WEIGHTS_NAME, CONFIG_NAME
+from pytorch_pretrained_bert.modeling import BertForQuestionAnswering, BertForQuestionAnsweringWHL, BertForQuestionAnsweringHighway, BertForQuestionAnsweringWHLHighway, BertConfig, WEIGHTS_NAME, CONFIG_NAME
 from pytorch_pretrained_bert.optimization import BertAdam, warmup_linear
 from pytorch_pretrained_bert.tokenization import (BasicTokenizer,
                                                   BertTokenizer,
@@ -841,7 +841,7 @@ def main():
     parser.add_argument('--version_2_with_negative',
                         action='store_true',
                         help='If true, the SQuAD examples contain some that do not have an answer.')
-    parser.add_argument('--null_score_diff_threshold',
+    parser.add_argument('--null_score_diff_thrBertForQuestionAnsweringWHLHighwayeshold',
                         type=float, default=0.0,
                         help="If null_score - best_non_null is greater than the threshold predict null.")
     parser.add_argument('--improvement',
@@ -911,6 +911,9 @@ def main():
                     cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE, 'distributed_{}'.format(args.local_rank)))
 
     elif args.improvement == 2:
+        model = BertForQuestionAnsweringWHLHighway.from_pretrained(args.bert_model,
+                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE,'distributed_{}'.format(args.local_rank)))
+    elif args.improvement == 3:
         model = BertForQuestionAnsweringHighway.from_pretrained(args.bert_model,
                     cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE,'distributed_{}'.format(args.local_rank)))
 
@@ -1043,6 +1046,8 @@ def main():
         elif args.improvement == 1:
             model = BertForQuestionAnsweringWHL(config)
         elif args.improvement == 2:
+            model = BertForQuestionAnsweringWHLHighway(config)
+        elif args.improvement == 3:
             model = BertForQuestionAnsweringHighway(config)
         model.load_state_dict(torch.load(output_model_file))
     else:
@@ -1055,6 +1060,10 @@ def main():
             output_model_file = "../debug_squad_WHL/pytorch_model.bin"
             model.load_state_dict(torch.load(output_model_file))
         elif args.improvement == 2:
+            model = BertForQuestionAnsweringWHLHighway.from_pretrained(args.bert_model)
+            output_model_file = "../debug_squad_WHL_highway/pytorch_model.bin"
+            model.load_state_dict(torch.load(output_model_file))
+        elif args.improvement == 3:
             model = BertForQuestionAnsweringHighway.from_pretrained(args.bert_model)
             output_model_file = os.path.join(args.output_dir, WEIGHTS_NAME)
             model.load_state_dict(torch.load(output_model_file))
