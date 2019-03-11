@@ -1200,14 +1200,15 @@ class BertForQuestionAnsweringBidaf(BertPreTrainedModel):
                 end_positions = end_positions.squeeze(-1)
 
             # sometimes the start/end positions are outside our model inputs, we ignore these terms
-            print("-------start_logits.size----------")
-            print(start_logits.size())
-            print("expected size ----- batch_size, seq_length")
-            print(start_logits.size())
-            ignored_index = start_logits.size(1)
+            ignored_index = max_seq_length - max_query_length - 2
+            #ignored_index = start_logits.size(1)
             start_positions.clamp_(0, ignored_index)
             end_positions.clamp_(0, ignored_index)
 
+            print(len(start_logits.size()))
+            if(len(start_logits.size()) != 2):
+                print("fuck")
+                return 0
             loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
             start_loss = loss_fct(start_logits, start_positions)
             end_loss = loss_fct(end_logits, end_positions)
