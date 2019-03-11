@@ -1437,8 +1437,6 @@ class BiDAFOutput(nn.Module):
         # Shapes: (batch_size, seq_len)
         #log_p1 = masked_softmax(logits_1.squeeze(), mask, log_softmax=True)
         #log_p2 = masked_softmax(logits_2.squeeze(), mask, log_softmax=True)
-        print("---------------LOGIT1 SIZE-----------------")
-        print(logits_1.size())
         return logits_1.squeeze(), logits_2.squeeze()
         #return log_p1, log_p2
 
@@ -1581,7 +1579,13 @@ class BertForQuestionAnsweringBidaf(BertPreTrainedModel):
         question_len = torch.tensor([question_end_index] * batch_size)
         context_len = torch.tensor([max_seq_length - max_query_length - 2] * batch_size)
 
+        print("----expected start_logits size-----")
+        print(context_len)
+
         start_logits, end_logits = self.bidaf(question_output, context_output, question_mask, context_mask, question_len, context_len)
+
+        print("----output size-----")
+        print(start_logits.size())
 
         #logits = self.qa_outputs(sequence_output)
         #start_logits, end_logits = logits.split(1, dim=-1)
@@ -1594,7 +1598,12 @@ class BertForQuestionAnsweringBidaf(BertPreTrainedModel):
                 start_positions = start_positions.squeeze(-1)
             if len(end_positions.size()) > 1:
                 end_positions = end_positions.squeeze(-1)
+
             # sometimes the start/end positions are outside our model inputs, we ignore these terms
+            print("-------start_logits.size----------")
+            print(start_logits.size())
+            print("expected size ----- batch_size, seq_length")
+            print(start_logits.size())
             ignored_index = start_logits.size(1)
             start_positions.clamp_(0, ignored_index)
             end_positions.clamp_(0, ignored_index)

@@ -498,8 +498,6 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
             end_indexes = _get_best_indexes(result.end_logits, n_best_size)
             # if we could have irrelevant answers, get the min score of irrelevant
             if version_2_with_negative:
-                print("-----------------START LOGITS----------------------")
-                print(result.start_logits)
                 feature_null_score = result.start_logits[0] + result.end_logits[0]
                 if feature_null_score < score_null:
                     score_null = feature_null_score
