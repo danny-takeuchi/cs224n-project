@@ -1024,7 +1024,7 @@ def main():
                 losses.append(loss.data[0])
                 if n_gpu > 1:
                     loss = loss.mean() # mean() to average on multi-gpu.
-                if args.gradient_accumulation_st:eps > 1:
+                if args.gradient_accumulation_steps > 1:
                     loss = loss / args.gradient_accumulation_steps
 
                 if args.fp16:
