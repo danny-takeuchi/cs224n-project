@@ -1223,7 +1223,7 @@ class BertForQuestionAnsweringWHL(BertPreTrainedModel):
         self.bert = BertModel(config)
         # TODO check with Google if it's normal there is no dropout on the token classifier of SQuAD in the TF version
         # self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.weight_hidden = nn.Linear(config.num_hidden_layers, 1)
+        self.weight_hidden = nn.Linear(3, 1)
         self.qa_outputs = nn.Linear(config.hidden_size, 2)
         self.apply(self.init_bert_weights)
 
@@ -1231,9 +1231,8 @@ class BertForQuestionAnsweringWHL(BertPreTrainedModel):
         sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=True)
 
         #12 x 8 x 384 x 768
-        sequence_output = torch.stack(sequence_output)
-
-        #8 x 384 x 768 x 12
+        sequence_output = torch.stack(sequence_output[-3:])
+        #8 x 384 x 768 x 3
         sequence_output = sequence_output.permute(1,2,3,0)
 
         #8 x 384 x 768 x 1
@@ -1379,7 +1378,6 @@ class BertForQuestionAnsweringHighway(BertPreTrainedModel):
             ignored_index = start_logits.size(1)
             start_positions.clamp_(0, ignored_index)
             end_positions.clamp_(0, ignored_index)
-
             loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
             start_loss = loss_fct(start_logits, start_positions)
             end_loss = loss_fct(end_logits, end_positions)

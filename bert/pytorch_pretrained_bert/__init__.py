@@ -3,7 +3,6 @@ from .tokenization import BertTokenizer, BasicTokenizer, WordpieceTokenizer
 from .tokenization_openai import OpenAIGPTTokenizer
 from .tokenization_transfo_xl import (TransfoXLTokenizer, TransfoXLCorpus)
 from .tokenization_gpt2 import GPT2Tokenizer
-
 from .modeling import (BertConfig, BertModel, BertForQuestionAnswering,
                        load_tf_weights_in_bert)
 from .modeling_openai import (OpenAIGPTConfig, OpenAIGPTModel,

@@ -29,10 +29,10 @@ from io import open
 
 import numpy as np
 import torch
+import matplotlib.pyplot as plt
 from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
                               TensorDataset)
 from torch.utils.data.distributed import DistributedSampler
-
 from tqdm import tqdm, trange
 from pytorch_pretrained_bert.file_utils import PYTORCH_PRETRAINED_BERT_CACHE
 from pytorch_pretrained_bert.modeling import BertForQuestionAnswering, BertForQuestionAnsweringWHL, BertForQuestionAnsweringHighway, BertForQuestionAnsweringWHLHighway, BertConfig, WEIGHTS_NAME, CONFIG_NAME
@@ -1002,13 +1002,22 @@ def main():
             train_sampler = DistributedSampler(train_data)
         train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.train_batch_size)
 
+        def plot(x, y):
+            plt.plot(x, y)
+            plt.ylabel("Loss")
+            plt.xlabel("Iteration")
+            plt.show()
+
         model.train()
+        losses_epochs = []
         for _ in trange(int(args.num_train_epochs), desc="Epoch"):
+            losses = []
             for step, batch in enumerate(tqdm(train_dataloader, desc="Iteration")):
                 if n_gpu == 1:
                     batch = tuple(t.to(device) for t in batch) # multi-gpu does scattering it-self
                 input_ids, input_mask, segment_ids, start_positions, end_positions = batch
                 loss = model(input_ids, segment_ids, input_mask, start_positions, end_positions)
+                losses.append(loss.item())
                 if n_gpu > 1:
                     loss = loss.mean() # mean() to average on multi-gpu.
                 if args.gradient_accumulation_steps > 1:
@@ -1028,7 +1037,9 @@ def main():
                     optimizer.step()
                     optimizer.zero_grad()
                     global_step += 1
-
+            losses_epochs.append(losses)
+        for epoch in losses_epochs:
+            plot([i for i in range(len(epoch))], epoch)
     if args.do_train:
         # Save a trained model and the associated configuration
         model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
