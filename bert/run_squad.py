@@ -1038,8 +1038,12 @@ def main():
                     optimizer.zero_grad()
                     global_step += 1
             losses_epochs.append(losses)
-        for epoch in losses_epochs:
-            plot([i for i in range(len(epoch))], epoch)
+
+        import csv
+        with open("../debug_squad_baseV12/loss.csv", "w") as f:
+            wr = csv.writer(f)
+            wr.writerows(losses_epochs)
+
     if args.do_train:
         # Save a trained model and the associated configuration
         model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
