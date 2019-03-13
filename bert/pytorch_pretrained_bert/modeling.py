@@ -1349,7 +1349,6 @@ class BertForQuestionAnsweringHighway(BertPreTrainedModel):
     def __init__(self, config):
         super(BertForQuestionAnsweringHighway, self).__init__(config)
         self.bert = BertModel(config)
-        self.hidden_size =  config.hidden_size
         self.hidden_dropout_prob = config.hidden_dropout_prob
         # TODO check with Google if it's normal there is no dropout on the token classifier of SQuAD in the TF version
         self.highway = Highway(config.hidden_size)
@@ -1393,6 +1392,7 @@ class BertForQuestionAnsweringModifiedLoss(BertPreTrainedModel):
     def __init__(self, config):
         super(BertForQuestionAnsweringModifiedLoss, self).__init__(config)
         self.bert = BertModel(config)
+        self.hidden_size =  config.hidden_size
         # TODO check with Google if it's normal there is no dropout on the token classifier of SQuAD in the TF version
         # self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.qa_outputs = nn.Linear(config.hidden_size, 2)
