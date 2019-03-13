@@ -1423,7 +1423,7 @@ class BertForQuestionAnsweringModifiedLoss(BertPreTrainedModel):
                     weights[i] = 2
                 else:
                     weights[i] = 1
-
+            weights = torch.tensor(weights)
             loss_fct = CrossEntropyLoss(ignore_index=ignored_index, weight = weights)
             start_loss = loss_fct(start_logits, start_positions)
             end_loss = loss_fct(end_logits, end_positions)
