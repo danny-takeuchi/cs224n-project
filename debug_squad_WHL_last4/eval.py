@@ -114,28 +114,7 @@ def AAScore(filepath):
 # writeCleanDevQuestionsJson()
 jsonToCSV()
 # writeCleanDevJson()
-filepath = "../debug_squad_baseV12/dev_submission.csv"
+filepath = "../debug_squad_WHL_last4/dev_submission.csv"
 print("getAnsweredNonanswersScore: " + str(ANaScore(filepath)))
 print("getNonansweredAnswersScore: " + str(NaAScore(filepath)))
 print("WrongAnswersScore: " + str(AAScore(filepath)))
-
-import matplotlib.pyplot as plt
-with open("../debug_squad_baseV12/loss.csv", "r") as f:
-    x = f.readlines()
-    for i in range(len(x)):
-        x[i] = x[i].split(",")
-        for j in range(len(x[i])):
-            m = re.search("([0-9]\.[0-9]{4})", x[i][j])
-            if m:
-                x[i][j] = m.group(1)
-            else:
-                x[i][j] = ""
-        x[i] = [j for j in x[i] if j != ""]
-
-def plot(x, y):
-    plt.plot(x, y)
-    plt.ylabel("Loss")
-    plt.xlabel("Iteration")
-    plt.show()
-
-plot([i for i in range(len(x[1]))], x[1])
