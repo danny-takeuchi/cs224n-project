@@ -1392,7 +1392,6 @@ class BertForQuestionAnsweringModifiedLoss(BertPreTrainedModel):
     def __init__(self, config):
         super(BertForQuestionAnsweringModifiedLoss, self).__init__(config)
         self.bert = BertModel(config)
-        self.hidden_size =  config.hidden_size
         # TODO check with Google if it's normal there is no dropout on the token classifier of SQuAD in the TF version
         # self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.qa_outputs = nn.Linear(config.hidden_size, 2)
@@ -1418,7 +1417,7 @@ class BertForQuestionAnsweringModifiedLoss(BertPreTrainedModel):
             start_positions.clamp_(0, ignored_index)
             end_positions.clamp_(0, ignored_index)
 
-            weights =[2] + [1 for i in range(self.hidden_size - 1)]
+            weights =[2] + [1 for i in range(384 - 1)]
             weights = torch.tensor(weights, dtype = torch.float64, device = device).float()
             loss_fct = CrossEntropyLoss(ignore_index=ignored_index, weight = weights)
             start_loss = loss_fct(start_logits, start_positions)
