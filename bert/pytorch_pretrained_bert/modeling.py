@@ -1389,12 +1389,11 @@ class BertForQuestionAnsweringHighway(BertPreTrainedModel):
 
 class BertForQuestionAnsweringModifiedLoss(BertPreTrainedModel):
 
-    def __init__(self, config, device):
+    def __init__(self, config):
         super(BertForQuestionAnsweringModifiedLoss, self).__init__(config)
         self.bert = BertModel(config)
         # TODO check with Google if it's normal there is no dropout on the token classifier of SQuAD in the TF version
         # self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.device = device
         self.qa_outputs = nn.Linear(config.hidden_size, 2)
         self.apply(self.init_bert_weights)
 
@@ -1406,7 +1405,7 @@ class BertForQuestionAnsweringModifiedLoss(BertPreTrainedModel):
 
         start_logits = start_logits.squeeze(-1)
         end_logits = end_logits.squeeze(-1)
-
+        device = torch.device("cuda")
         if start_positions is not None and end_positions is not None:
             # If we are on multi-GPU, split add a dimension
             if len(start_positions.size()) > 1:
@@ -1424,7 +1423,7 @@ class BertForQuestionAnsweringModifiedLoss(BertPreTrainedModel):
                     weights[i] = 2
                 else:
                     weights[i] = 1
-            weights = torch.tensor(weights, device = self.device)
+            weights = torch.tensor(weights, device = device)
             loss_fct = CrossEntropyLoss(ignore_index=ignored_index, weight = weights)
             start_loss = loss_fct(start_logits, start_positions)
             end_loss = loss_fct(end_logits, end_positions)

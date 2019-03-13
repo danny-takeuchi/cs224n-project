@@ -917,7 +917,7 @@ def main():
         model = BertForQuestionAnsweringHighway.from_pretrained(args.bert_model,
                     cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE,'distributed_{}'.format(args.local_rank)))
     elif args.improvement == 4:
-        model = BertForQuestionAnsweringModifiedLoss.from_pretrained(args.bert_model, inputs = device,
+        model = BertForQuestionAnsweringModifiedLoss.from_pretrained(args.bert_model,
                     cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE,'distributed_{}'.format(args.local_rank)))
 
     if args.fp16:
@@ -1067,7 +1067,7 @@ def main():
         elif args.improvement == 3:
             model = BertForQuestionAnsweringHighway(config)
         elif args.improvement == 4:
-            model = BertForQuestionAnsweringModifiedLoss(config, device)
+            model = BertForQuestionAnsweringModifiedLoss(config)
         model.load_state_dict(torch.load(output_model_file))
     else:
         if args.improvement == 0:
@@ -1087,7 +1087,7 @@ def main():
             output_model_file = os.path.join(args.output_dir, WEIGHTS_NAME)
             model.load_state_dict(torch.load(output_model_file))
         elif args.improvement == 4:
-            model = BertForQuestionAnsweringModifiedLoss.from_pretrained(args.bert_model, inputs = device)
+            model = BertForQuestionAnsweringModifiedLoss.from_pretrained(args.bert_model)
             output_model_file = os.path.join(args.output_dir, WEIGHTS_NAME)
             model.load_state_dict(torch.load(output_model_file))
 
