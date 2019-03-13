@@ -1067,7 +1067,7 @@ def main():
         elif args.improvement == 3:
             model = BertForQuestionAnsweringHighway(config)
         elif args.improvement == 4:
-            model = BertForQuestionAnsweringModifiedLoss(config)
+            model = BertForQuestionAnsweringModifiedLoss(config, device)
         model.load_state_dict(torch.load(output_model_file))
     else:
         if args.improvement == 0:
