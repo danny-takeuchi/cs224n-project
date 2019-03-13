@@ -35,7 +35,7 @@ from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
 from torch.utils.data.distributed import DistributedSampler
 from tqdm import tqdm, trange
 from pytorch_pretrained_bert.file_utils import PYTORCH_PRETRAINED_BERT_CACHE
-from pytorch_pretrained_bert.modeling import BertForQuestionAnswering, BertForQuestionAnsweringWHL, BertForQuestionAnsweringHighway, BertForQuestionAnsweringWHLHighway, BertConfig, WEIGHTS_NAME, CONFIG_NAME
+from pytorch_pretrained_bert.modeling import BertForQuestionAnswering, BertForQuestionAnsweringWHL, BertForQuestionAnsweringHighway, BertForQuestionAnsweringWHLHighway, BertForQuestionAnsweringModifiedLoss, BertConfig, WEIGHTS_NAME, CONFIG_NAME
 from pytorch_pretrained_bert.optimization import BertAdam, warmup_linear
 from pytorch_pretrained_bert.tokenization import (BasicTokenizer,
                                                   BertTokenizer,
@@ -916,6 +916,9 @@ def main():
     elif args.improvement == 3:
         model = BertForQuestionAnsweringHighway.from_pretrained(args.bert_model,
                     cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE,'distributed_{}'.format(args.local_rank)))
+    elif args.improvement == 4:
+        model = BertForQuestionAnsweringModifiedLoss.from_pretrained(args.bert_model,
+                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE,'distributed_{}'.format(args.local_rank)))
 
     if args.fp16:
         model.half()
@@ -1003,13 +1006,8 @@ def main():
             train_sampler = DistributedSampler(train_data)
         train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.train_batch_size)
 
-        def plot(x, y):
-            plt.plot(x, y)
-            plt.ylabel("Loss")
-            plt.xlabel("Iteration")
-            plt.show()
         import csv
-        with open("../debug_squad_baseV12/loss.csv", "w") as f:
+        with open("../debug_squad_WHL_modifiedLoss/loss.csv", "w") as f:
             wr = csv.writer(f)
             wr.writerows([])
         model.train()
@@ -1044,7 +1042,7 @@ def main():
             losses_epochs.append(losses)
 
         import csv
-        with open("../debug_squad_baseV12/loss.csv", "w") as f:
+        with open("../debug_squad_WHL_modifiedLoss/loss.csv", "w") as f:
             wr = csv.writer(f)
             wr.writerows(losses_epochs)
 
@@ -1068,6 +1066,8 @@ def main():
             model = BertForQuestionAnsweringWHLHighway(config)
         elif args.improvement == 3:
             model = BertForQuestionAnsweringHighway(config)
+        elif args.improvement == 4:
+            model = BertForQuestionAnsweringModifiedLoss(config)
         model.load_state_dict(torch.load(output_model_file))
     else:
         if args.improvement == 0:
@@ -1084,6 +1084,10 @@ def main():
             model.load_state_dict(torch.load(output_model_file))
         elif args.improvement == 3:
             model = BertForQuestionAnsweringHighway.from_pretrained(args.bert_model)
+            output_model_file = os.path.join(args.output_dir, WEIGHTS_NAME)
+            model.load_state_dict(torch.load(output_model_file))
+        elif args.improvement == 4:
+            model = BertForQuestionAnsweringModifiedLoss.from_pretrained(args.bert_model)
             output_model_file = os.path.join(args.output_dir, WEIGHTS_NAME)
             model.load_state_dict(torch.load(output_model_file))
 
