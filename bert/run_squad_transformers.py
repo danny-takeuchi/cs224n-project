@@ -29,13 +29,13 @@ from io import open
 
 import numpy as np
 import torch
-import matplotlib.pyplot as plt
 from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
                               TensorDataset)
 from torch.utils.data.distributed import DistributedSampler
 from tqdm import tqdm, trange
+
 from pytorch_pretrained_bert.file_utils import PYTORCH_PRETRAINED_BERT_CACHE
-from pytorch_pretrained_bert.modeling import BertForQuestionAnswering, BertForQuestionAnsweringWHL, BertForQuestionAnsweringHighway, BertForQuestionAnsweringWHLHighway, BertForQuestionAnsweringModifiedLoss, BertForQuestionAnsweringCNN, BertConfig, WEIGHTS_NAME, CONFIG_NAME
+from pytorch_pretrained_bert.modeling import BertForQuestionAnswering, BertForQuestionAnsweringWHL, BertForQuestionAnsweringTransformers, BertConfig, WEIGHTS_NAME, CONFIG_NAME
 from pytorch_pretrained_bert.optimization import BertAdam, warmup_linear
 from pytorch_pretrained_bert.tokenization import (BasicTokenizer,
                                                   BertTokenizer,
@@ -240,7 +240,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 example.orig_answer_text)
 
         # The -3 accounts for [CLS], [SEP] and [SEP]
-        max_tokens_for_doc = max_seq_length - len(query_tokens) - 3
+        max_tokens_for_doc = max_seq_length - max_query_length - 3
 
         # Modification: query will be padded at a later step to max_query_length
         # We can have documents that are longer than the maximum sequence length.
@@ -272,24 +272,35 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             tokens.append("[SEP]")
             segment_ids.append(0)
 
+            input_ids = tokenizer.convert_tokens_to_ids(tokens)
+            input_mask = [1] * len(input_ids)
+            num_query_pad = max_query_length - len(query_tokens)
+            
+            #perform padding for the question
+            for i in range(num_query_pad):
+                input_ids.append(0)
+                input_mask.append(0)
+                segment_ids.append(0)
+            
+            tokens = []
+            
             for i in range(doc_span.length):
                 split_token_index = doc_span.start + i
                 token_to_orig_map[len(tokens)] = tok_to_orig_index[split_token_index]
-
+            
                 is_max_context = _check_is_max_context(doc_spans, doc_span_index,
                                                        split_token_index)
                 token_is_max_context[len(tokens)] = is_max_context
                 tokens.append(all_doc_tokens[split_token_index])
                 segment_ids.append(1)
+                input_mask.append(1)
+            
             tokens.append("[SEP]")
             segment_ids.append(1)
-
-            input_ids = tokenizer.convert_tokens_to_ids(tokens)
-
-            # The mask has 1 for real tokens and 0 for padding tokens. Only real
-            # tokens are attended to.
-            input_mask = [1] * len(input_ids)
-
+            input_mask.append(1)
+            
+            input_ids = input_ids + tokenizer.convert_tokens_to_ids(tokens)
+            
             # Zero-pad up to the sequence length.
             while len(input_ids) < max_seq_length:
                 input_ids.append(0)
@@ -476,13 +487,13 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
         min_null_feature_index = 0  # the paragraph slice with min mull score
         null_start_logit = 0  # the start logit at the slice with min null score
         null_end_logit = 0  # the end logit at the slice with min null score
+        count = 0
         for (feature_index, feature) in enumerate(features):
             result = unique_id_to_result[feature.unique_id]
-            # count = 0
-            # if not isinstance(result.start_logits, list) or not isinstance(result.end_logits, list):
-            #     count +=1
-            #     print("-----------------ERROR---------------" + str(count))
-            #     continue
+            if not isinstance(result.start_logits, list) or not isinstance(result.end_logits, list):
+                count +=1
+                print("-----------------ERROR---------------" + str(count))
+                continue
             start_indexes = _get_best_indexes(result.start_logits, n_best_size)
             end_indexes = _get_best_indexes(result.end_logits, n_best_size)
             # if we could have irrelevant answers, get the min score of irrelevant
@@ -618,7 +629,7 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
 
         if not version_2_with_negative:
             all_predictions[example.qas_id] = nbest_json[0]["text"]
-        elif(best_non_null_entry is not None):
+        else:
             # predict "" iff the null score - the score of best non-null > threshold
             score_diff = score_null - best_non_null_entry.start_logit - (
                 best_non_null_entry.end_logit)
@@ -844,9 +855,6 @@ def main():
     parser.add_argument('--null_score_diff_threshold',
                         type=float, default=0.0,
                         help="If null_score - best_non_null is greater than the threshold predict null.")
-    parser.add_argument('--improvement',
-                        type=float, default=0.0,
-                        help="Which tweak to the baseline Bert model to run.")
     args = parser.parse_args()
 
     if args.local_rank == -1 or args.no_cuda:
@@ -903,25 +911,8 @@ def main():
             num_train_optimization_steps = num_train_optimization_steps // torch.distributed.get_world_size()
 
     # Prepare model
-    if args.improvement == 0:
-        model = BertForQuestionAnswering.from_pretrained(args.bert_model,
-                    cache_dir=os.path.join(str(PYTORCH_PRETRAINED_BERT_CACHE), 'distributed_{}'.format(args.local_rank)))
-    elif args.improvement == 1:
-        model = BertForQuestionAnsweringWHL.from_pretrained(args.bert_model,
-                    cache_dir=os.path.join(str(PYTORCH_PRETRAINED_BERT_CACHE), 'distributed_{}'.format(args.local_rank)))
-
-    elif args.improvement == 2:
-        model = BertForQuestionAnsweringWHLHighway.from_pretrained(args.bert_model,
-                    cache_dir=os.path.join(str(PYTORCH_PRETRAINED_BERT_CACHE),'distributed_{}'.format(args.local_rank)))
-    elif args.improvement == 3:
-        model = BertForQuestionAnsweringHighway.from_pretrained(args.bert_model,
-                    cache_dir=os.path.join(str(PYTORCH_PRETRAINED_BERT_CACHE),'distributed_{}'.format(args.local_rank)))
-    elif args.improvement == 4:
-        model = BertForQuestionAnsweringModifiedLoss.from_pretrained(args.bert_model,
-                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE,'distributed_{}'.format(args.local_rank)))
-    elif args.improvement == 5:
-        model = BertForQuestionAnsweringCNN.from_pretrained(args.bert_model,
-                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE,'distributed_{}'.format(args.local_rank)))
+    model = BertForQuestionAnsweringTransformers.from_pretrained(args.bert_model,
+                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE, 'distributed_{}'.format(args.local_rank)))
 
     if args.fp16:
         model.half()
@@ -970,7 +961,6 @@ def main():
                              warmup=args.warmup_proportion,
                              t_total=num_train_optimization_steps)
 
-
     global_step = 0
     if args.do_train:
         cached_train_features_file = args.train_file+'_{0}_{1}_{2}_{3}'.format(
@@ -1009,20 +999,15 @@ def main():
             train_sampler = DistributedSampler(train_data)
         train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.train_batch_size)
 
-        import csv
-        with open("../debug_squad/loss.csv", "w") as f:
-            wr = csv.writer(f)
-            wr.writerows([])
         model.train()
-        losses_epochs = []
         for _ in trange(int(args.num_train_epochs), desc="Epoch"):
-            losses = []
             for step, batch in enumerate(tqdm(train_dataloader, desc="Iteration")):
                 if n_gpu == 1:
                     batch = tuple(t.to(device) for t in batch) # multi-gpu does scattering it-self
                 input_ids, input_mask, segment_ids, start_positions, end_positions = batch
+
                 loss = model(input_ids, segment_ids, input_mask, start_positions, end_positions)
-                losses.append(loss.item())
+                #loss = model(args.max_seq_length, args.max_query_length,input_ids, segment_ids, input_mask, start_positions, end_positions)
                 if n_gpu > 1:
                     loss = loss.mean() # mean() to average on multi-gpu.
                 if args.gradient_accumulation_steps > 1:
@@ -1042,12 +1027,6 @@ def main():
                     optimizer.step()
                     optimizer.zero_grad()
                     global_step += 1
-            losses_epochs.append(losses)
-
-        import csv
-        with open("../debug_squad/loss.csv", "w") as f:
-            wr = csv.writer(f)
-            wr.writerows(losses_epochs)
 
     if args.do_train:
         # Save a trained model and the associated configuration
@@ -1061,45 +1040,10 @@ def main():
         # Load a trained model and config that you have fine-tuned
         config = BertConfig(output_config_file)
 
-        if args.improvement == 0:
-            model = BertForQuestionAnswering(config)
-        elif args.improvement == 1:
-            model = BertForQuestionAnsweringWHL(config)
-        elif args.improvement == 2:
-            model = BertForQuestionAnsweringWHLHighway(config)
-        elif args.improvement == 3:
-            model = BertForQuestionAnsweringHighway(config)
-        elif args.improvement == 4:
-            model = BertForQuestionAnsweringModifiedLoss(config)
-        elif args.improvement == 5:
-            model = BertForQuestionAnsweringCNN(config)
+        model = BertForQuestionAnsweringTransformers(config)
         model.load_state_dict(torch.load(output_model_file))
-        
     else:
-        if args.improvement == 0:
-            model = BertForQuestionAnswering.from_pretrained(args.bert_model)
-            output_model_file = "../debug_squad2/pytorch_model.bin"
-            model.load_state_dict(torch.load(output_model_file))
-        elif args.improvement == 1:
-            model = BertForQuestionAnsweringWHL.from_pretrained(args.bert_model)
-            output_model_file = "../debug_squad_WHL/pytorch_model.bin"
-            model.load_state_dict(torch.load(output_model_file))
-        elif args.improvement == 2:
-            model = BertForQuestionAnsweringWHLHighway.from_pretrained(args.bert_model)
-            output_model_file = "../debug_squad_WHL_highway/pytorch_model.bin"
-            model.load_state_dict(torch.load(output_model_file))
-        elif args.improvement == 3:
-            model = BertForQuestionAnsweringHighway.from_pretrained(args.bert_model)
-            output_model_file = "../debug_squad_highway/pytorch_model.bin"
-            model.load_state_dict(torch.load(output_model_file))
-        elif args.improvement == 4:
-            model = BertForQuestionAnsweringModifiedLoss.from_pretrained(args.bert_model)
-            output_model_file = "../debug_squad_modifiedLoss/pytorch_model.bin"
-            model.load_state_dict(torch.load(output_model_file))
-        elif args.improvement == 5:
-            model = BertForQuestionAnsweringCNN.from_pretrained(args.bert_model)
-            output_model_file = os.path.join(args.output_dir, WEIGHTS_NAME)
-            model.load_state_dict(torch.load(output_model_file))
+        model = BertForQuestionAnsweringTransformers.from_pretrained(args.bert_model)
 
 
     model.to(device)
@@ -1140,6 +1084,7 @@ def main():
             segment_ids = segment_ids.to(device)
             with torch.no_grad():
                 batch_start_logits, batch_end_logits = model(input_ids, segment_ids, input_mask)
+                #batch_start_logits, batch_end_logits = model(args.max_seq_length, args.max_query_length, input_ids, segment_ids, input_mask)
             for i, example_index in enumerate(example_indices):
                 start_logits = batch_start_logits[i].detach().cpu().tolist()
                 end_logits = batch_end_logits[i].detach().cpu().tolist()
