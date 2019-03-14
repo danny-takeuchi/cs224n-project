@@ -1484,13 +1484,17 @@ class BertForQuestionAnsweringTransformers(BertPreTrainedModel):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.qa_outputs = nn.Linear(config.hidden_size, 2)
         self.apply(self.init_bert_weights)
-        self.transformer_layer = BertLayer(config)
+        self.transformer_layer_1 = BertLayer(config)
+        self.transformer_layer_2 = BertLayer(config)
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None):
         
         sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
-        sequence_output = self.transformer_layer(sequence_output, attention_mask)
-
+        print(sequence_output.size())
+        sequence_output = self.transformer_layer_1(sequence_output, attention_mask)
+        sequence_output = self.transformer_layer_2(sequence_output, attention_mask)
+        print(sequence_output.size())
+       
         logits = self.qa_outputs(sequence_output)
 
         start_logits, end_logits = logits.split(1, dim=-1)
