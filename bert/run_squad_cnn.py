@@ -480,9 +480,6 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
 
     for (example_index, example) in enumerate(all_examples):
         features = example_index_to_features[example_index]
-        if(example_index == (len(all_examples) -1)):
-          print("skip this")
-          continue
         prelim_predictions = []
         # keep track of the minimum score of null start+end of position 0
         score_null = 1000000  # large and positive
