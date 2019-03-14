@@ -146,7 +146,6 @@ class BertConfig(object):
                  type_vocab_size=2,
                  initializer_range=0.02):
         """Constructs BertConfig.
-
         Args:
             vocab_size_or_config_json_file: Vocabulary size of `inputs_ids` in `BertModel`.
             hidden_size: Size of the encoder layers and the pooler layer.
@@ -523,7 +522,6 @@ class BertPreTrainedModel(nn.Module):
         """
         Instantiate a BertPreTrainedModel from a pre-trained model file or a pytorch state dict.
         Download and cache the pre-trained model file if needed.
-
         Params:
             pretrained_model_name_or_path: either:
                 - a str with the name of a pre-trained model to load selected in the list of:
@@ -643,10 +641,8 @@ class BertPreTrainedModel(nn.Module):
 
 class BertModel(BertPreTrainedModel):
     """BERT model ("Bidirectional Embedding Representations from a Transformer").
-
     Params:
         config: a BertConfig class instance with the configuration to build a new model
-
     Inputs:
         `input_ids`: a torch.LongTensor of shape [batch_size, sequence_length]
             with the word token indices in the vocabulary(see the tokens preprocessing logic in the scripts
@@ -659,7 +655,6 @@ class BertModel(BertPreTrainedModel):
             input sequence length in the current batch. It's the mask that we typically use for attention when
             a batch has varying length sentences.
         `output_all_encoded_layers`: boolean which controls the content of the `encoded_layers` output as described below. Default: `True`.
-
     Outputs: Tuple of (encoded_layers, pooled_output)
         `encoded_layers`: controled by `output_all_encoded_layers` argument:
             - `output_all_encoded_layers=True`: outputs a list of the full sequences of encoded-hidden-states at the end
@@ -670,17 +665,14 @@ class BertModel(BertPreTrainedModel):
         `pooled_output`: a torch.FloatTensor of size [batch_size, hidden_size] which is the output of a
             classifier pretrained on top of the hidden state associated to the first character of the
             input (`CLS`) to train on the Next-Sentence task (see BERT's paper).
-
     Example usage:
     ```python
     # Already been converted into WordPiece token ids
     input_ids = torch.LongTensor([[31, 51, 99], [15, 5, 0]])
     input_mask = torch.LongTensor([[1, 1, 1], [1, 1, 0]])
     token_type_ids = torch.LongTensor([[0, 0, 1], [0, 1, 0]])
-
     config = modeling.BertConfig(vocab_size_or_config_json_file=32000, hidden_size=768,
         num_hidden_layers=12, num_attention_heads=12, intermediate_size=3072)
-
     model = modeling.BertModel(config=config)
     all_encoder_layers, pooled_output = model(input_ids, token_type_ids, input_mask)
     ```
@@ -729,10 +721,8 @@ class BertForQuestionAnswering(BertPreTrainedModel):
     """BERT model for Question Answering (span extraction).
     This module is composed of the BERT model with a linear layer on top of
     the sequence output that computes start_logits and end_logits
-
     Params:
         `config`: a BertConfig class instance with the configuration to build a new model.
-
     Inputs:
         `input_ids`: a torch.LongTensor of shape [batch_size, sequence_length]
             with the word token indices in the vocabulary(see the tokens preprocessing logic in the scripts
@@ -750,24 +740,20 @@ class BertForQuestionAnswering(BertPreTrainedModel):
         `end_positions`: position of the last token for the labeled span: torch.LongTensor of shape [batch_size].
             Positions are clamped to the length of the sequence and position outside of the sequence are not taken
             into account for computing the loss.
-
     Outputs:
         if `start_positions` and `end_positions` are not `None`:
             Outputs the total_loss which is the sum of the CrossEntropy loss for the start and end token positions.
         if `start_positions` or `end_positions` is `None`:
             Outputs a tuple of start_logits, end_logits which are the logits respectively for the start and end
             position tokens of shape [batch_size, sequence_length].
-
     Example usage:
     ```python
     # Already been converted into WordPiece token ids
     input_ids = torch.LongTensor([[31, 51, 99], [15, 5, 0]])
     input_mask = torch.LongTensor([[1, 1, 1], [1, 1, 0]])
     token_type_ids = torch.LongTensor([[0, 0, 1], [0, 1, 0]])
-
     config = BertConfig(vocab_size_or_config_json_file=32000, hidden_size=768,
         num_hidden_layers=12, num_attention_heads=12, intermediate_size=3072)
-
     model = BertForQuestionAnswering(config)
     start_logits, end_logits = model(input_ids, token_type_ids, input_mask)
     ```
@@ -811,7 +797,6 @@ class BertForQuestionAnswering(BertPreTrainedModel):
 def masked_softmax(logits, mask, dim=-1, log_softmax=False):
     """Take the softmax of `logits` over given dimension, and set
     entries to 0 wherever `mask` is 0.
-
     Args:
         logits (torch.Tensor): Inputs to the softmax function.
         mask (torch.Tensor): Same shape as `logits`, with 0 indicating
@@ -819,7 +804,6 @@ def masked_softmax(logits, mask, dim=-1, log_softmax=False):
         dim (int): Dimension over which to take softmax.
         log_softmax (bool): Take log-softmax rather than regular softmax.
             E.g., some PyTorch functions such as `F.nll_loss` expect log-softmax.
-
     Returns:
         probs (torch.Tensor): Result of taking masked softmax over the logits.
     """
@@ -833,10 +817,8 @@ def masked_softmax(logits, mask, dim=-1, log_softmax=False):
 
 class Embedding(nn.Module):
     """Embedding layer used by BiDAF, without the character-level component.
-
     Word-level embeddings are further refined using a 2-layer Highway Encoder
     (see `HighwayEncoder` class for details).
-
     Args:
         word_vectors (torch.Tensor): Pre-trained word vectors.
         hidden_size (int): Size of hidden activations.
@@ -860,12 +842,10 @@ class Embedding(nn.Module):
 
 class HighwayEncoder(nn.Module):
     """Encode an input sequence using a highway network.
-
     Based on the paper:
     "Highway Networks"
     by Rupesh Kumar Srivastava, Klaus Greff, Jürgen Schmidhuber
     (https://arxiv.org/abs/1505.00387).
-
     Args:
         num_layers (int): Number of layers in the highway encoder.
         hidden_size (int): Size of hidden activations.
@@ -889,10 +869,8 @@ class HighwayEncoder(nn.Module):
 
 class RNNEncoder(nn.Module):
     """General-purpose layer for encoding a sequence using a bidirectional RNN.
-
     Encoded output is the RNN's hidden state at each position, which
     has shape `(batch_size, seq_len, hidden_size * 2)`.
-
     Args:
         input_size (int): Size of a single timestep in the input.
         hidden_size (int): Size of the RNN hidden state.
@@ -936,7 +914,6 @@ class RNNEncoder(nn.Module):
 
 class BiDAFAttention(nn.Module):
     """Bidirectional attention originally used by BiDAF.
-
     Bidirectional attention computes attention in two directions:
     The context attends to the query and the query attends to the context.
     The output of this layer is the concatenation of [context, c2q_attention,
@@ -944,7 +921,6 @@ class BiDAFAttention(nn.Module):
     the attention vector at each timestep, along with the embeddings from
     previous layers, to flow through the attention layer to the modeling layer.
     The output has shape (batch_size, context_len, 8 * hidden_size).
-
     Args:
         hidden_size (int): Size of hidden activations.
         drop_prob (float): Probability of zero-ing out activations.
@@ -980,11 +956,9 @@ class BiDAFAttention(nn.Module):
     def get_similarity_matrix(self, c, q):
         """Get the "similarity matrix" between context and query (using the
         terminology of the BiDAF paper).
-
         A naive implementation as described in BiDAF would concatenate the
         three vectors then project the result with a single weight matrix. This
         method is a more memory-efficient implementation of the same operation.
-
         See Also:
             Equation 1 in https://arxiv.org/abs/1611.01603
         """
@@ -1004,13 +978,11 @@ class BiDAFAttention(nn.Module):
 
 class BiDAFOutput(nn.Module):
     """Output layer used by BiDAF for question answering.
-
     Computes a linear transformation of the attention and modeling
     outputs, then takes the softmax of the result to get the start pointer.
     A bidirectional LSTM is then applied the modeling output to produce `mod_2`.
     A second linear+softmax of the attention output and `mod_2` is used
     to get the end pointer.
-
     Args:
         hidden_size (int): Hidden size used in the BiDAF model.
         drop_prob (float): Probability of zero-ing out activations.
@@ -1044,19 +1016,16 @@ class BiDAFOutput(nn.Module):
 
 class BiDAF(nn.Module):
     """Baseline BiDAF model for SQuAD.
-
     Based on the paper:
     "Bidirectional Attention Flow for Machine Comprehension"
     by Minjoon Seo, Aniruddha Kembhavi, Ali Farhadi, Hannaneh Hajishirzi
     (https://arxiv.org/abs/1611.01603).
-
     Follows a high-level structure commonly found in SQuAD models:
         - Embedding layer: Embed word indices to get word vectors.
         - Encoder layer: Encode the embedded sequence.
         - Attention layer: Apply an attention mechanism to the encoded sequence.
         - Model encoder layer: Encode the sequence again.
         - Output layer: Simple layer (e.g., fc + softmax) to get final outputs.
-
     Args:
         word_vectors (torch.Tensor): Pre-trained word vectors.
         hidden_size (int): Number of features in the hidden state at each layer.
@@ -1104,6 +1073,7 @@ class BiDAF(nn.Module):
         start_logits, end_logits = self.out(att, mod, context_mask)  # 2 tensors, each (batch_size, c_len)
 
         return start_logits, end_logits
+
 
 class BertForQuestionAnsweringBidaf(BertPreTrainedModel):
     """BERT model for Question Answering (span extraction).
@@ -1426,3 +1396,168 @@ class BertForQuestionAnsweringModifiedLoss(BertPreTrainedModel):
             return total_loss
         else:
             return start_logits, end_logits
+
+class CNN(nn.Module):
+
+    def __init__(self, e_char, num_filters):
+        super(CNN, self).__init__()
+
+        #hardcoded value of 2 as kernel size
+        self.kernel_size = 2
+        self.e_char = e_char
+        self.num_filters = num_filters
+        self.cnn_layer = nn.Conv1d(in_channels = self.e_char, out_channels = num_filters, kernel_size = self.kernel_size)
+
+    def forward(self, x_reshaped: torch.Tensor) -> torch.Tensor:
+        x_conv = self.cnn_layer(x_reshaped)
+        x_conv_out = torch.max(nn.functional.relu(x_conv),dim =2)
+        return x_conv_out[0]
+
+
+class BertForQuestionAnsweringCNN(BertPreTrainedModel):
+    def __init__(self, config):
+        super(BertForQuestionAnsweringCNN, self).__init__(config)
+        self.bert = BertModel(config)
+        # TODO check with Google if it's normal there is no dropout on the token classifier of SQuAD in the TF version
+        # self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.qa_outputs = nn.Linear(config.hidden_size, 2)
+        self.apply(self.init_bert_weights)
+        self.cnn_layer = CNN(config.hidden_size, config.hidden_size)
+        self.hidden_dropout_prob = config.hidden_dropout_prob
+        self.highway = Highway(config.hidden_size)
+        self.dropout = nn.Dropout(self.hidden_dropout_prob)
+
+
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None):
+        sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=True)
+        print(type(sentence_output)) 
+        sequence_output = torch.stack(sequence_output[-4:]) #result will be of shape (4, batch_size, seq_length, hidden_size)
+        print(type(sentence_output))
+        print("expected (4, batch_size, seq_length, hidden)", sentence_output.size())
+        sequence_output = sequence_output.contiguous().permute(1, 2, 3, 0) #shape (batch, seq, hidden, 4)
+        batch_size = sequence_output.size()[0]
+        seq_length = sequence_output.size()[1]
+        hidden_size = sequence_output.size()[2]
+
+        sequence_output = sequence_output.contiguous().view(batch_size*seq_length,hidden_size,4) 
+        print("expected (batch_size*seq_length, hidden, 4)", sequence_output.size())
+
+        sequence_overall_output = self.cnn_layer(sequence_output) #shape (batch, seq, hidden)
+        sequence_overall_output = self.highway(sequence_overall_output)
+        sequence_overall_output = self.dropout(sequence_overall_output)
+        sequence_overall_output = sequence_overall_output.contiguous().view(batch_size,seq_length,hidden_size)
+
+        print("expected (batch_size, seq_length, hidden_size)", sequence_output.size())
+
+        logits = self.qa_outputs(sequence_overall_output)
+
+        start_logits, end_logits = logits.split(1, dim=-1)
+
+        start_logits = start_logits.squeeze(-1)
+        end_logits = end_logits.squeeze(-1)
+
+        if start_positions is not None and end_positions is not None:
+            # If we are on multi-GPU, split add a dimension
+            if len(start_positions.size()) > 1:
+                start_positions = start_positions.squeeze(-1)
+            if len(end_positions.size()) > 1:
+                end_positions = end_positions.squeeze(-1)
+            # sometimes the start/end positions are outside our model inputs, we ignore these terms
+            ignored_index = start_logits.size(1)
+            start_positions.clamp_(0, ignored_index)
+            end_positions.clamp_(0, ignored_index)
+
+            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
+            total_loss = (start_loss + end_loss) / 2
+            return total_loss
+        else:
+            return start_logits, end_logits
+
+
+class BertForQuestionAnsweringTransformers(BertPreTrainedModel):
+    def __init__(self, config):
+        super(BertForQuestionAnsweringTransformers, self).__init__(config)
+        self.bert = BertModel(config)
+        # TODO check with Google if it's normal there is no dropout on the token classifier of SQuAD in the TF version
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.qa_outputs = nn.Linear(config.hidden_size, 2)
+        self.apply(self.init_bert_weights)
+        self.transformer_layer = BertLayer(config)
+
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None):
+        
+        sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
+        sequence_output = self.transformer_layer(sequence_output, attention_mask)
+
+        logits = self.qa_outputs(sequence_output)
+
+        start_logits, end_logits = logits.split(1, dim=-1)
+
+        start_logits = start_logits.squeeze(-1)
+        end_logits = end_logits.squeeze(-1)
+
+        if start_positions is not None and end_positions is not None:
+            # If we are on multi-GPU, split add a dimension
+            if len(start_positions.size()) > 1:
+                start_positions = start_positions.squeeze(-1)
+            if len(end_positions.size()) > 1:
+                end_positions = end_positions.squeeze(-1)
+            # sometimes the start/end positions are outside our model inputs, we ignore these terms
+            ignored_index = start_logits.size(1)
+            start_positions.clamp_(0, ignored_index)
+            end_positions.clamp_(0, ignored_index)
+
+            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
+            total_loss = (start_loss + end_loss) / 2
+            return total_loss
+        else:
+            return start_logits, end_logits
+
+class BertForQuestionAnsweringAttention(BertPreTrainedModel):
+    def __init__(self, config):
+        super(BertForQuestionAnsweringAttention, self).__init__(config)
+        # TODO check with Google if it's normal there is no dropout on the token classifier of SQuAD in the TF version
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.qa_outputs = nn.Linear(config.hidden_size, 2)
+        self.apply(self.init_bert_weights)
+        self.context_question_attention = BiDAFAttention(config.hidden_size)
+
+
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None):
+        
+        sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
+        #sequence_output = self.context_question_attention(sequence_output)
+
+        #apply attention layer 
+        #run through transformer perhaps 
+
+        logits = self.qa_outputs(sequence_output)
+
+        start_logits, end_logits = logits.split(1, dim=-1)
+
+        start_logits = start_logits.squeeze(-1)
+        end_logits = end_logits.squeeze(-1)
+
+        if start_positions is not None and end_positions is not None:
+            # If we are on multi-GPU, split add a dimension
+            if len(start_positions.size()) > 1:
+                start_positions = start_positions.squeeze(-1)
+            if len(end_positions.size()) > 1:
+                end_positions = end_positions.squeeze(-1)
+            # sometimes the start/end positions are outside our model inputs, we ignore these terms
+            ignored_index = start_logits.size(1)
+            start_positions.clamp_(0, ignored_index)
+            end_positions.clamp_(0, ignored_index)
+
+            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
+            total_loss = (start_loss + end_loss) / 2
+            return total_loss
+        else:
+            return start_logits, end_logits
+
