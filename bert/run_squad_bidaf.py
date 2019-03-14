@@ -614,6 +614,10 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
                 if entry.text:
                     best_non_null_entry = entry
 
+        if (best_non_null_entry is None):
+            best_non_null_entry = nbest[0]
+
+
         probs = _compute_softmax(total_scores)
 
         nbest_json = []
