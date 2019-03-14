@@ -905,20 +905,20 @@ def main():
     # Prepare model
     if args.improvement == 0:
         model = BertForQuestionAnswering.from_pretrained(args.bert_model,
-                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE, 'distributed_{}'.format(args.local_rank)))
+                    cache_dir=os.path.join(str(PYTORCH_PRETRAINED_BERT_CACHE), 'distributed_{}'.format(args.local_rank)))
     elif args.improvement == 1:
         model = BertForQuestionAnsweringWHL.from_pretrained(args.bert_model,
-                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE, 'distributed_{}'.format(args.local_rank)))
+                    cache_dir=os.path.join(str(PYTORCH_PRETRAINED_BERT_CACHE), 'distributed_{}'.format(args.local_rank)))
 
     elif args.improvement == 2:
         model = BertForQuestionAnsweringWHLHighway.from_pretrained(args.bert_model,
-                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE,'distributed_{}'.format(args.local_rank)))
+                    cache_dir=os.path.join(str(PYTORCH_PRETRAINED_BERT_CACHE),'distributed_{}'.format(args.local_rank)))
     elif args.improvement == 3:
         model = BertForQuestionAnsweringHighway.from_pretrained(args.bert_model,
-                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE,'distributed_{}'.format(args.local_rank)))
+                    cache_dir=os.path.join(str(PYTORCH_PRETRAINED_BERT_CACHE),'distributed_{}'.format(args.local_rank)))
     elif args.improvement == 4:
         model = BertForQuestionAnsweringModifiedLoss.from_pretrained(args.bert_model,
-                    cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE,'distributed_{}'.format(args.local_rank)))
+                    cache_dir=os.path.join(str(PYTORCH_PRETRAINED_BERT_CACHE),'distributed_{}'.format(args.local_rank)))
 
     if args.fp16:
         model.half()
@@ -1084,11 +1084,11 @@ def main():
             model.load_state_dict(torch.load(output_model_file))
         elif args.improvement == 3:
             model = BertForQuestionAnsweringHighway.from_pretrained(args.bert_model)
-            output_model_file = os.path.join(args.output_dir, WEIGHTS_NAME)
+            output_model_file = "../debug_squad_highway/pytorch_model.bin"
             model.load_state_dict(torch.load(output_model_file))
         elif args.improvement == 4:
             model = BertForQuestionAnsweringModifiedLoss.from_pretrained(args.bert_model)
-            output_model_file = os.path.join(args.output_dir, WEIGHTS_NAME)
+            output_model_file = "../debug_squad_modifiedLoss/pytorch_model.bin"
             model.load_state_dict(torch.load(output_model_file))
 
 

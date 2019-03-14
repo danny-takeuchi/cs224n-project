@@ -46,6 +46,7 @@ def writeCleanDevQuestionsJson():
                 question = a['question']
                 g.write(str(question.encode('utf-8')) + '\n')
 
+from collections import OrderedDict
 def jsonToCSV():
     import csv
     # Write submission file for Kaggle
@@ -54,7 +55,8 @@ def jsonToCSV():
         csv_writer.writerow(['Id', 'Predicted'])
 
         with open('predictions.json') as f:
-            data = json.load(f)
+            input_data = f.read()
+            data = json.loads(input_data.decode('utf-8'), object_pairs_hook=OrderedDict)
             for uuid in data:
                 csv_writer.writerow([uuid, data[uuid].encode('utf-8')])
 
