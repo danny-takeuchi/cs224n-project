@@ -1071,10 +1071,10 @@ def main():
             model = BertForQuestionAnsweringHighway(config)
         elif args.improvement == 4:
             model = BertForQuestionAnsweringModifiedLoss(config)
-        model.load_state_dict(torch.load(output_model_file))
         elif args.improvement == 5:
             model = BertForQuestionAnsweringCNN(config)
         model.load_state_dict(torch.load(output_model_file))
+        
     else:
         if args.improvement == 0:
             model = BertForQuestionAnswering.from_pretrained(args.bert_model)
