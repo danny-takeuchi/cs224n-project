@@ -31,6 +31,7 @@ from io import open
 
 import torch
 import torch.nn.functional as F
+import torch.nn.utils
 from torch import nn
 from torch.nn import CrossEntropyLoss
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
@@ -1105,8 +1106,9 @@ class BiDAF(nn.Module):
 
         return start_logits, end_logits
 
+"""
 class BertForQuestionAnsweringBidaf(BertPreTrainedModel):
-    """BERT model for Question Answering (span extraction).
+    BERT model for Question Answering (span extraction).
     This module is composed of the BERT model with a linear layer on top of
     the sequence output that computes start_logits and end_logits
 
@@ -1151,7 +1153,7 @@ class BertForQuestionAnsweringBidaf(BertPreTrainedModel):
     model = BertForQuestionAnswering(config)
     start_logits, end_logits = model(input_ids, token_type_ids, input_mask)
     ```
-    """
+    
     def __init__(self, config):
         super(BertForQuestionAnsweringBidaf, self).__init__(config)
         self.bert = BertModel(config)
@@ -1159,8 +1161,8 @@ class BertForQuestionAnsweringBidaf(BertPreTrainedModel):
         # self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.qa_outputs = nn.Linear(config.hidden_size, 2)
         self.apply(self.init_bert_weights)
-        self.bidaf = BiDAF(config.hidden_size)
-
+        self.attention_layer = BiDAFAttention(config.hidden_size)
+        self.transformer_layer = BertLayer(config)
 
     def forward(self, max_seq_length, max_query_length, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None):
         sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
@@ -1179,13 +1181,8 @@ class BertForQuestionAnsweringBidaf(BertPreTrainedModel):
         question_len = torch.tensor([question_end_index] * batch_size)
         context_len = torch.tensor([max_seq_length - max_query_length - 2] * batch_size)
 
-        print("----expected start_logits size-----")
-        print(context_len)
-
-        start_logits, end_logits = self.bidaf(question_output, context_output, question_mask, context_mask, question_len, context_len)
-
-        print("----output size-----")
-        print(start_logits.size())
+        context_output = self.attention_layer(context_output, question_output, context_mask, question_mask)
+        context_output = self.transformer_layer(context_output, context_mask)
 
         #logits = self.qa_outputs(sequence_output)
         #start_logits, end_logits = logits.split(1, dim=-1)
@@ -1215,6 +1212,7 @@ class BertForQuestionAnsweringBidaf(BertPreTrainedModel):
             return total_loss
         else:
             return start_logits, end_logits
+"""
 
 class BertForQuestionAnsweringWHL(BertPreTrainedModel):
     def __init__(self, config):
@@ -1386,3 +1384,171 @@ class BertForQuestionAnsweringHighway(BertPreTrainedModel):
             return total_loss
         else:
             return start_logits, end_logits
+
+class CNN(nn.Module):
+
+    def __init__(self, e_char, num_filters):
+        super(CNN, self).__init__()
+
+        #hardcoded value of 2 as kernel size
+        self.kernel_size = 2
+        self.e_char = e_char
+        self.num_filters = num_filters
+        self.cnn_layer = nn.Conv1d(in_channels = self.e_char, out_channels = num_filters, kernel_size = self.kernel_size)
+
+    def forward(self, x_reshaped: torch.Tensor) -> torch.Tensor:
+        x_conv = self.cnn_layer(x_reshaped)
+        x_conv_out = torch.max(nn.functional.relu(x_conv),dim =2)
+        return x_conv_out[0]
+
+
+class BertForQuestionAnsweringCNN(BertPreTrainedModel):
+    def __init__(self, config):
+        super(BertForQuestionAnswering, self).__init__(config)
+        self.bert = BertModel(config)
+        # TODO check with Google if it's normal there is no dropout on the token classifier of SQuAD in the TF version
+        # self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.qa_outputs = nn.Linear(config.hidden_size, 2)
+        self.apply(self.init_bert_weights)
+        self.cnn_layer = CNN(config.hidden_size, config.hidden_size)
+        self.hidden_dropout_prob = config.hidden_dropout_prob
+        self.highway = Highway(config.hidden_size)
+        self.dropout = nn.Dropout(self.hidden_dropout_prob)
+
+
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None):
+        sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=True)
+        print(type(sentence_output)) 
+        sequence_output = torch.stack(sequence_output[-4:]) #result will be of shape (4, batch_size, seq_length, hidden_size)
+        print(type(sentence_output))
+        print("expected (4, batch_size, seq_length, hidden)", sentence_output.size())
+        sequence_output = sequence_output.contiguous().permute(1, 2, 3, 0) #shape (batch, seq, hidden, 4)
+        batch_size = sequence_output.size()[0]
+        seq_length = sequence_output.size()[1]
+        hidden_size = sequence_output.size()[2]
+
+        sequence_output = sequence_output.contiguous().view(batch_size*seq_length,hidden_size,4) 
+        print("expected (batch_size*seq_length, hidden, 4)", sequence_output.size())
+
+        sequence_overall_output = self.cnn_layer(sequence_output) #shape (batch, seq, hidden)
+        sequence_overall_output = self.highway(sequence_overall_output)
+        sequence_overall_output = self.dropout(sequence_overall_output)
+        sequence_overall_output = sequence_overall_output.contiguous().view(batch_size,seq_length,hidden_size)
+
+        print("expected (batch_size, seq_length, hidden_size)", sequence_output.size())
+
+        logits = self.qa_outputs(sequence_overall_output)
+
+        start_logits, end_logits = logits.split(1, dim=-1)
+
+        start_logits = start_logits.squeeze(-1)
+        end_logits = end_logits.squeeze(-1)
+
+        if start_positions is not None and end_positions is not None:
+            # If we are on multi-GPU, split add a dimension
+            if len(start_positions.size()) > 1:
+                start_positions = start_positions.squeeze(-1)
+            if len(end_positions.size()) > 1:
+                end_positions = end_positions.squeeze(-1)
+            # sometimes the start/end positions are outside our model inputs, we ignore these terms
+            ignored_index = start_logits.size(1)
+            start_positions.clamp_(0, ignored_index)
+            end_positions.clamp_(0, ignored_index)
+
+            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
+            total_loss = (start_loss + end_loss) / 2
+            return total_loss
+        else:
+            return start_logits, end_logits
+
+
+
+class BertForQuestionAnsweringTransformers(BertPreTrainedModel):
+    def __init__(self, config):
+        super(BertForQuestionAnswering, self).__init__(config)
+        self.bert = BertModel(config)
+        # TODO check with Google if it's normal there is no dropout on the token classifier of SQuAD in the TF version
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.qa_outputs = nn.Linear(config.hidden_size, 2)
+        self.apply(self.init_bert_weights)
+        self.transformer_layer = BertLayer(config)
+
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None):
+        
+        sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
+        sequence_output = self.transformer_layer(sequence_output, attention_mask)
+
+        logits = self.qa_outputs(sequence_output)
+
+        start_logits, end_logits = logits.split(1, dim=-1)
+
+        start_logits = start_logits.squeeze(-1)
+        end_logits = end_logits.squeeze(-1)
+
+        if start_positions is not None and end_positions is not None:
+            # If we are on multi-GPU, split add a dimension
+            if len(start_positions.size()) > 1:
+                start_positions = start_positions.squeeze(-1)
+            if len(end_positions.size()) > 1:
+                end_positions = end_positions.squeeze(-1)
+            # sometimes the start/end positions are outside our model inputs, we ignore these terms
+            ignored_index = start_logits.size(1)
+            start_positions.clamp_(0, ignored_index)
+            end_positions.clamp_(0, ignored_index)
+
+            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
+            total_loss = (start_loss + end_loss) / 2
+            return total_loss
+        else:
+            return start_logits, end_logits
+
+class BertForQuestionAnsweringAttention(BertPreTrainedModel):
+    def __init__(self, config):
+        super(BertForQuestionAnswering, self).__init__(config)
+        # TODO check with Google if it's normal there is no dropout on the token classifier of SQuAD in the TF version
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.qa_outputs = nn.Linear(config.hidden_size, 2)
+        self.apply(self.init_bert_weights)
+        self.context_question_attention = BiDAFAttention(config.hidden_size)
+
+
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None):
+        
+        sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
+        sequence_output = self.context_question_attention(sequence_output)
+
+        #apply attention layer 
+        #run through transformer perhaps 
+
+        logits = self.qa_outputs(sequence_output)
+
+        start_logits, end_logits = logits.split(1, dim=-1)
+
+        start_logits = start_logits.squeeze(-1)
+        end_logits = end_logits.squeeze(-1)
+
+        if start_positions is not None and end_positions is not None:
+            # If we are on multi-GPU, split add a dimension
+            if len(start_positions.size()) > 1:
+                start_positions = start_positions.squeeze(-1)
+            if len(end_positions.size()) > 1:
+                end_positions = end_positions.squeeze(-1)
+            # sometimes the start/end positions are outside our model inputs, we ignore these terms
+            ignored_index = start_logits.size(1)
+            start_positions.clamp_(0, ignored_index)
+            end_positions.clamp_(0, ignored_index)
+
+            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
+            total_loss = (start_loss + end_loss) / 2
+            return total_loss
+        else:
+            return start_logits, end_logits
+
+
+

@@ -35,7 +35,7 @@ from torch.utils.data.distributed import DistributedSampler
 from tqdm import tqdm, trange
 
 from pytorch_pretrained_bert.file_utils import PYTORCH_PRETRAINED_BERT_CACHE
-from pytorch_pretrained_bert.modeling import BertForQuestionAnswering, BertForQuestionAnsweringWHL, BertForQuestionAnsweringBidaf, BertConfig, WEIGHTS_NAME, CONFIG_NAME
+from pytorch_pretrained_bert.modeling import BertForQuestionAnswering, BertForQuestionAnsweringWHL, BertForQuestionAnsweringCNN, BertConfig, WEIGHTS_NAME, CONFIG_NAME
 from pytorch_pretrained_bert.optimization import BertAdam, warmup_linear
 from pytorch_pretrained_bert.tokenization import (BasicTokenizer,
                                                   BertTokenizer,
@@ -911,7 +911,7 @@ def main():
             num_train_optimization_steps = num_train_optimization_steps // torch.distributed.get_world_size()
 
     # Prepare model
-    model = BertForQuestionAnsweringBidaf.from_pretrained(args.bert_model,
+    model = BertForQuestionAnsweringCNN.from_pretrained(args.bert_model,
                     cache_dir=os.path.join(PYTORCH_PRETRAINED_BERT_CACHE, 'distributed_{}'.format(args.local_rank)))
 
     if args.fp16:
@@ -1006,7 +1006,8 @@ def main():
                     batch = tuple(t.to(device) for t in batch) # multi-gpu does scattering it-self
                 input_ids, input_mask, segment_ids, start_positions, end_positions = batch
 
-                loss = model(args.max_seq_length, args.max_query_length,input_ids, segment_ids, input_mask, start_positions, end_positions)
+                loss = model(input_ids, segment_ids, input_mask, start_positions, end_positions)
+                #loss = model(args.max_seq_length, args.max_query_length,input_ids, segment_ids, input_mask, start_positions, end_positions)
                 if n_gpu > 1:
                     loss = loss.mean() # mean() to average on multi-gpu.
                 if args.gradient_accumulation_steps > 1:
@@ -1039,10 +1040,10 @@ def main():
         # Load a trained model and config that you have fine-tuned
         config = BertConfig(output_config_file)
 
-        model = BertForQuestionAnsweringBidaf(config)
+        model = BertForQuestionAnsweringCNN(config)
         model.load_state_dict(torch.load(output_model_file))
     else:
-        model = BertForQuestionAnsweringBidaf.from_pretrained(args.bert_model)
+        model = BertForQuestionAnsweringCNN.from_pretrained(args.bert_model)
 
 
     model.to(device)
@@ -1082,7 +1083,8 @@ def main():
             input_mask = input_mask.to(device)
             segment_ids = segment_ids.to(device)
             with torch.no_grad():
-                batch_start_logits, batch_end_logits = model(args.max_seq_length, args.max_query_length, input_ids, segment_ids, input_mask)
+                batch_start_logits, batch_end_logits = model(input_ids, segment_ids, input_mask)
+                #batch_start_logits, batch_end_logits = model(args.max_seq_length, args.max_query_length, input_ids, segment_ids, input_mask)
             for i, example_index in enumerate(example_indices):
                 start_logits = batch_start_logits[i].detach().cpu().tolist()
                 end_logits = batch_end_logits[i].detach().cpu().tolist()
