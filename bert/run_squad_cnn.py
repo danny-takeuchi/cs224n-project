@@ -605,40 +605,40 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
                 _NbestPrediction(text="empty", start_logit=0.0, end_logit=0.0))
 
         assert len(nbest) >= 1
+        if(len(nbest) != 1):
+          total_scores = []
+          best_non_null_entry = None
+          for entry in nbest:
+              total_scores.append(entry.start_logit + entry.end_logit)
+              if not best_non_null_entry:
+                  if entry.text:
+                      best_non_null_entry = entry
 
-        total_scores = []
-        best_non_null_entry = None
-        for entry in nbest:
-            total_scores.append(entry.start_logit + entry.end_logit)
-            if not best_non_null_entry:
-                if entry.text:
-                    best_non_null_entry = entry
+          probs = _compute_softmax(total_scores)
 
-        probs = _compute_softmax(total_scores)
+          nbest_json = []
+          for (i, entry) in enumerate(nbest):
+              output = collections.OrderedDict()
+              output["text"] = entry.text
+              output["probability"] = probs[i]
+              output["start_logit"] = entry.start_logit
+              output["end_logit"] = entry.end_logit
+              nbest_json.append(output)
 
-        nbest_json = []
-        for (i, entry) in enumerate(nbest):
-            output = collections.OrderedDict()
-            output["text"] = entry.text
-            output["probability"] = probs[i]
-            output["start_logit"] = entry.start_logit
-            output["end_logit"] = entry.end_logit
-            nbest_json.append(output)
+          assert len(nbest_json) >= 1
 
-        assert len(nbest_json) >= 1
-
-        if not version_2_with_negative:
-            all_predictions[example.qas_id] = nbest_json[0]["text"]
-        else:
-            # predict "" iff the null score - the score of best non-null > threshold
-            score_diff = score_null - best_non_null_entry.start_logit - (
-                best_non_null_entry.end_logit)
-            scores_diff_json[example.qas_id] = score_diff
-            if score_diff > null_score_diff_threshold:
-                all_predictions[example.qas_id] = ""
-            else:
-                all_predictions[example.qas_id] = best_non_null_entry.text
-                all_nbest_json[example.qas_id] = nbest_json
+          if not version_2_with_negative:
+              all_predictions[example.qas_id] = nbest_json[0]["text"]
+          else:
+              # predict "" iff the null score - the score of best non-null > threshold
+              score_diff = score_null - best_non_null_entry.start_logit - (
+                  best_non_null_entry.end_logit)
+              scores_diff_json[example.qas_id] = score_diff
+              if score_diff > null_score_diff_threshold:
+                  all_predictions[example.qas_id] = ""
+              else:
+                  all_predictions[example.qas_id] = best_non_null_entry.text
+                  all_nbest_json[example.qas_id] = nbest_json
 
     with open(output_prediction_file, "w") as writer:
         writer.write(json.dumps(all_predictions, indent=4) + "\n")
