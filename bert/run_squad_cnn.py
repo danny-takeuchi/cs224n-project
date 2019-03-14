@@ -642,6 +642,8 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
               else:
                   all_predictions[example.qas_id] = best_non_null_entry.text
                   all_nbest_json[example.qas_id] = nbest_json
+          else:
+            print("idk")
 
     with open(output_prediction_file, "w") as writer:
         writer.write(json.dumps(all_predictions, indent=4) + "\n")
