@@ -1074,8 +1074,7 @@ class BiDAF(nn.Module):
 
         return start_logits, end_logits
 
-<<<<<<< HEAD
-=======
+
 class BertForQuestionAnsweringBidaf(BertPreTrainedModel):
     """BERT model for Question Answering (span extraction).
     This module is composed of the BERT model with a linear layer on top of
@@ -1188,7 +1187,6 @@ class BertForQuestionAnsweringBidaf(BertPreTrainedModel):
         else:
             return start_logits, end_logits
 
->>>>>>> master
 class BertForQuestionAnsweringWHL(BertPreTrainedModel):
     def __init__(self, config):
         super(BertForQuestionAnsweringWHL, self).__init__(config)
