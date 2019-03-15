@@ -968,7 +968,7 @@ def main():
         #                      lr=args.learning_rate,
         #                      warmup=args.warmup_proportion,
         #                      t_total=num_train_optimization_steps)
-        optimizer = torch.Adam(optimizer_grouped_parameters, lr=args.learning_rate)
+        optimizer = torch.optim.Adam(optimizer_grouped_parameters, lr=args.learning_rate)
 
     global_step = 0
     if args.do_train:
