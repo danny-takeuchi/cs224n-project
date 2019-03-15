@@ -308,7 +308,8 @@ class BertSelfAttention(nn.Module):
         print(attention_scores.size())
         print("attention_mask")
         print(attention_mask.size())
-        
+        if(len(list(attention_mask.size())) == 2):
+           attention_mask = attention_mask.view(attention_mask.size()[0], 1, 1, attention_mask.size()[1])
         attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
