@@ -130,7 +130,7 @@ with open("../debug_squad_baseV12/loss.csv", "r") as f:
                 x[i][j] = m.group(1)
             else:
                 x[i][j] = ""
-        x[i] = [j for j in x[i] if j != ""]
+        x[i] = [float(j) for j in x[i] if j != ""]
 
 def plot(x, y):
     plt.plot(x, y)

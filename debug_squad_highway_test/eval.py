@@ -1,11 +1,13 @@
 import json
 import re
+from collections import OrderedDict
 
-def writeCleanDevJson():
-    with open('dev-v2.0.json') as f:
-        data = json.load(f)
+def writeCleanTestJson():
+    with open('test-v2.0.json') as f:
+        input_data = f.read()
+        data = json.loads(input_data.decode('utf-8'), object_pairs_hook=OrderedDict)
 
-    g = open("dev-2.0-cleaned.txt", "w")
+    g = open("test-2.0-cleaned.txt", "w")
 
 
     data = data['data']
@@ -21,10 +23,10 @@ def writeCleanDevJson():
                 g.write(answers + '\n')
 
 import json
-def writeCleanDevContextsJson():
-    with open('dev-v2.0.json') as f:
+def writeCleanTestContextsJson():
+    with open('test-v2.0.json') as f:
         data = json.load(f)
-    g = open("dev-2.0-cleaned_contexts.txt", "w")
+    g = open("test-2.0-cleaned_contexts.txt", "w")
     data = data['data']
     for y in data:
         questions =y['paragraphs']
@@ -33,10 +35,11 @@ def writeCleanDevContextsJson():
             g.write(str(context.encode('utf-8')) + '\n')
 
 import json
-def writeCleanDevQuestionsJson():
-    with open('dev-v2.0.json') as f:
-        data = json.load(f)
-    g = open("dev-2.0-cleaned_questions.txt", "w")
+def writeCleanTestQuestionsJson():
+    with open('test-v2.0.json') as f:
+        input_data = f.read()
+        data = json.loads(input_data.decode('utf-8'), object_pairs_hook=OrderedDict)
+    g = open("test-2.0-cleaned_questions.txt", "w")
     data = data['data']
     for y in data:
         questions =y['paragraphs']
@@ -49,19 +52,20 @@ def writeCleanDevQuestionsJson():
 def jsonToCSV():
     import csv
     # Write submission file for Kaggle
-    with open('dev_submission.csv', 'w') as csv_fh:
+    with open('test_submission.csv', 'w') as csv_fh:
         csv_writer = csv.writer(csv_fh, delimiter=',')
         csv_writer.writerow(['Id', 'Predicted'])
 
         with open('predictions.json') as f:
-            data = json.load(f)
+            input_data = f.read()
+            data = json.loads(input_data.decode('utf-8'), object_pairs_hook=OrderedDict)
             for uuid in data:
-                csv_writer.writerow([uuid, data[uuid]])
+                csv_writer.writerow([uuid, data[uuid].encode('utf-8')])
 
 def parseResults(filepath):
     data = None
     results = None
-    with open('dev-2.0-cleaned.txt') as f:
+    with open('test-2.0-cleaned.txt') as f:
         data = f.readlines()
         data = [d.split(",") for d in data]
         for i in range(len(data)):
@@ -111,10 +115,12 @@ def AAScore(filepath):
 
     return 1 - numWrongAnswers / numAnswers
 
-# writeCleanDevQuestionsJson()
+
+writeCleanTestContextsJson()
+writeCleanTestQuestionsJson()
 jsonToCSV()
-# writeCleanDevJson()
-filepath = "../debug_squad_highway/dev_submission.csv"
-print("getAnsweredNonanswersScore: " + str(ANaScore(filepath)))
-print("getNonansweredAnswersScore: " + str(NaAScore(filepath)))
-print("WrongAnswersScore: " + str(AAScore(filepath)))
+# writeCleanTestJson()
+# filepath = "../debug_squad_highway_test/test_submission.csv"
+# print("getAnsweredNonanswersScore: " + str(ANaScore(filepath)))
+# print("getNonansweredAnswersScore: " + str(NaAScore(filepath)))
+# print("WrongAnswersScore: " + str(AAScore(filepath)))

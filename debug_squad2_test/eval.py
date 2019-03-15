@@ -5,7 +5,7 @@ from collections import OrderedDict
 def writeCleanTestJson():
     with open('test-v2.0.json') as f:
         input_data = f.read()
-        data = json.loads(input_data.decode('utf-8'), object_pairs_hook=OrderedDict)
+        data = json.loads(input_data, object_pairs_hook=OrderedDict)
 
     g = open("test-2.0-cleaned.txt", "w")
 
@@ -38,7 +38,7 @@ import json
 def writeCleanTestQuestionsJson():
     with open('test-v2.0.json') as f:
         input_data = f.read()
-        data = json.loads(input_data.decode('utf-8'), object_pairs_hook=OrderedDict)
+        data = json.loads(input_data, object_pairs_hook=OrderedDict)
     g = open("test-2.0-cleaned_questions.txt", "w")
     data = data['data']
     for y in data:
@@ -58,9 +58,9 @@ def jsonToCSV():
 
         with open('predictions.json') as f:
             input_data = f.read()
-            data = json.loads(input_data.decode('utf-8'), object_pairs_hook=OrderedDict)
+            data = json.loads(input_data, object_pairs_hook=OrderedDict)
             for uuid in data:
-                csv_writer.writerow([uuid, data[uuid].encode('utf-8')])
+                csv_writer.writerow([uuid, data[uuid]])
 
 def parseResults(filepath):
     data = None
@@ -116,11 +116,11 @@ def AAScore(filepath):
     return 1 - numWrongAnswers / numAnswers
 
 
-writeCleanTestContextsJson()
-writeCleanTestQuestionsJson()
+# writeCleanTestContextsJson()
+# writeCleanTestQuestionsJson()
 jsonToCSV()
 # writeCleanTestJson()
-# filepath = "../debug_squad_highway_test/test_submission.csv"
+filepath = "../debug_squad2_test/test_submission.csv"
 # print("getAnsweredNonanswersScore: " + str(ANaScore(filepath)))
 # print("getNonansweredAnswersScore: " + str(NaAScore(filepath)))
 # print("WrongAnswersScore: " + str(AAScore(filepath)))

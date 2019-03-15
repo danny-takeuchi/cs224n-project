@@ -56,9 +56,9 @@ def jsonToCSV():
 
         with open('predictions.json') as f:
             input_data = f.read()
-            data = json.loads(input_data.decode('utf-8'), object_pairs_hook=OrderedDict)
+            data = json.loads(input_data, object_pairs_hook=OrderedDict)
             for uuid in data:
-                csv_writer.writerow([uuid, data[uuid].encode('utf-8')])
+                csv_writer.writerow([uuid, data[uuid]])
 
 def parseResults(filepath):
     data = None
@@ -132,7 +132,7 @@ with open("loss.csv", "r") as f:
                 x[i][j] = m.group(1)
             else:
                 x[i][j] = ""
-        x[i] = [j for j in x[i] if j != ""]
+        x[i] = [float(j) for j in x[i] if j != ""]
 
 def plot(x, y):
     plt.plot(x, y)

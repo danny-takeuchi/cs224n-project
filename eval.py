@@ -56,9 +56,9 @@ def jsonToCSV():
 
         with open('predictions.json') as f:
             input_data = f.read()
-            data = json.loads(input_data.decode('utf-8'), object_pairs_hook=OrderedDict)
+            data = json.loads(input_data, object_pairs_hook=OrderedDict)
             for uuid in data:
-                csv_writer.writerow([uuid, data[uuid].encode('utf-8')])
+                csv_writer.writerow([uuid, data[uuid]])
 
 def parseResults(filepath):
     data = None
@@ -114,25 +114,25 @@ def AAScore(filepath):
     return 1 - numWrongAnswers / numAnswers
 
 # writeCleanDevQuestionsJson()
-jsonToCSV()
+# jsonToCSV()
 # writeCleanDevJson()
-filepath = "../debug_squad/dev_submission.csv"
-print("getAnsweredNonanswersScore: " + str(ANaScore(filepath)))
-print("getNonansweredAnswersScore: " + str(NaAScore(filepath)))
-print("WrongAnswersScore: " + str(AAScore(filepath)))
+# filepath = "../debug_squad/dev_submission.csv"
+# print("getAnsweredNonanswersScore: " + str(ANaScore(filepath)))
+# print("getNonansweredAnswersScore: " + str(NaAScore(filepath)))
+# print("WrongAnswersScore: " + str(AAScore(filepath)))
 
 import matplotlib.pyplot as plt
 with open("loss.csv", "r") as f:
     x = f.readlines()
     for i in range(len(x)):
         x[i] = x[i].split(",")
-        for j in range(len(x[i])):
-            m = re.search("([0-9]\.[0-9]{4})", x[i][j])
-            if m:
-                x[i][j] = m.group(1)
-            else:
-                x[i][j] = ""
-        x[i] = [j for j in x[i] if j != ""]
+        # for j in range(len(x[i])):
+        #     m = re.search("([0-9]\.[0-9]{4})", x[i][j])
+        #     if m:
+        #         x[i][j] = m.group(1)
+        #     else:
+        #         x[i][j] = ""
+        x[i] = [float(j) for j in x[i] if j != ""]
 
 def plot(x, y):
     plt.plot(x, y)
