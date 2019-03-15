@@ -303,7 +303,7 @@ class BertSelfAttention(nn.Module):
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
         # Apply the attention mask is (precomputed for all layers in BertModel forward() function)
         print("hidden_state")
-        print("hidden_states.size())
+        print(hidden_states.size())
         print("attention_score")
         print(attention_scores.size())
         print("attention_mask")
