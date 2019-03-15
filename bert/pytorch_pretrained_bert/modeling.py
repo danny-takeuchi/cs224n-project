@@ -302,6 +302,14 @@ class BertSelfAttention(nn.Module):
         attention_scores = torch.matmul(query_layer, key_layer.transpose(-1, -2))
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
         # Apply the attention mask is (precomputed for all layers in BertModel forward() function)
+        print("hidden_state")
+        print(hidden_states.size())
+        print("attention_score")
+        print(attention_scores.size())
+        print("attention_mask")
+        print(attention_mask.size())
+        if(len(list(attention_mask.size())) == 2):
+           attention_mask = attention_mask.view(attention_mask.size()[0], 1, 1, attention_mask.size()[1]).long()
         attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
@@ -1490,7 +1498,7 @@ class BertForQuestionAnsweringTransformers(BertPreTrainedModel):
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None):
         
         sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
-        print(sequence_output.size())
+        print("hi")
         sequence_output = self.transformer_layer_1(sequence_output, attention_mask)
         sequence_output = self.transformer_layer_2(sequence_output, attention_mask)
         print(sequence_output.size())
