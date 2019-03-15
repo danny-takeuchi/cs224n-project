@@ -909,7 +909,6 @@ def main():
     elif args.improvement == 1:
         model = BertForQuestionAnsweringWHL.from_pretrained(args.bert_model,
                     cache_dir=os.path.join(str(PYTORCH_PRETRAINED_BERT_CACHE), 'distributed_{}'.format(args.local_rank)))
-
     elif args.improvement == 2:
         model = BertForQuestionAnsweringWHLHighway.from_pretrained(args.bert_model,
                     cache_dir=os.path.join(str(PYTORCH_PRETRAINED_BERT_CACHE),'distributed_{}'.format(args.local_rank)))
@@ -965,11 +964,11 @@ def main():
         else:
             optimizer = FP16_Optimizer(optimizer, static_loss_scale=args.loss_scale)
     else:
-        optimizer = BertAdam(optimizer_grouped_parameters,
-                             lr=args.learning_rate,
-                             warmup=args.warmup_proportion,
-                             t_total=num_train_optimization_steps)
-
+        # optimizer = BertAdam(optimizer_grouped_parameters,
+        #                      lr=args.learning_rate,
+        #                      warmup=args.warmup_proportion,
+        #                      t_total=num_train_optimization_steps)
+        optimizer = torch.Adam(optimizer_grouped_parameters, lr=args.learning_rate)
 
     global_step = 0
     if args.do_train:
