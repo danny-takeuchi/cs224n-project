@@ -114,12 +114,12 @@ def AAScore(filepath):
     return 1 - numWrongAnswers / numAnswers
 
 # writeCleanDevQuestionsJson()
-# jsonToCSV()
+jsonToCSV()
 # writeCleanDevJson()
-# filepath = "../debug_squad/dev_submission.csv"
-# print("getAnsweredNonanswersScore: " + str(ANaScore(filepath)))
-# print("getNonansweredAnswersScore: " + str(NaAScore(filepath)))
-# print("WrongAnswersScore: " + str(AAScore(filepath)))
+filepath = "../debug_squad/dev_submission.csv"
+print("getAnsweredNonanswersScore: " + str(ANaScore(filepath)))
+print("getNonansweredAnswersScore: " + str(NaAScore(filepath)))
+print("WrongAnswersScore: " + str(AAScore(filepath)))
 
 import matplotlib.pyplot as plt
 with open("loss.csv", "r") as f:
@@ -140,4 +140,4 @@ def plot(x, y):
     plt.xlabel("Iteration")
     plt.show()
 
-plot([i for i in range(len(x[1]))], x[1])
+plot([i for i in range(len(x[0]))], x[0])
