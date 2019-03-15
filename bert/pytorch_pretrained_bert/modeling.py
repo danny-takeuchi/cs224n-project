@@ -1497,7 +1497,7 @@ class BertForQuestionAnsweringTransformers(BertPreTrainedModel):
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None):
         
         sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
-        print(sequence_output.size())
+        print("hi")
         sequence_output = self.transformer_layer_1(sequence_output, attention_mask)
         sequence_output = self.transformer_layer_2(sequence_output, attention_mask)
         print(sequence_output.size())
