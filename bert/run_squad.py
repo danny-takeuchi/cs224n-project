@@ -1013,7 +1013,7 @@ def main():
         train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.train_batch_size)
 
         import csv
-        with open("../debug_squad/loss.csv", "w") as f:
+        with open("../debug_squad_baseV12_Adam/loss.csv", "w") as f:
             wr = csv.writer(f)
             wr.writerows([])
         model.train()
@@ -1048,7 +1048,7 @@ def main():
             losses_epochs.append(losses)
 
         import csv
-        with open("../debug_squad/loss.csv", "w") as f:
+        with open("../debug_squad_baseV12_Adam/loss.csv", "w") as f:
             wr = csv.writer(f)
             wr.writerows(losses_epochs)
 
