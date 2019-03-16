@@ -983,7 +983,7 @@ def main():
 
         model.train()
         import csv
-        with open("../debug_squad_base/loss.csv", "w") as f:
+        with open("../debug_squad_NV12/loss.csv", "w") as f:
             wr = csv.writer(f)
             wr.writerows([])
         model.train()
@@ -995,7 +995,7 @@ def main():
                     batch = tuple(t.to(device) for t in batch) # multi-gpu does scattering it-self
                 input_ids, input_mask, segment_ids, start_positions, end_positions = batch
                 loss = model(input_ids, segment_ids, input_mask, start_positions, end_positions)
-                losses.append(loss.item())
+                losses.append(loss)
                 if n_gpu > 1:
                     loss = loss.mean() # mean() to average on multi-gpu.
                 if args.gradient_accumulation_steps > 1:
@@ -1017,7 +1017,7 @@ def main():
                     global_step += 1
             losses_epochs.append(losses)
 
-        with open("../debug_squad_base/loss.csv", "w") as f:
+        with open("../debug_squad_NV12/loss.csv", "w") as f:
             wr = csv.writer(f)
             wr.writerows(losses_epochs)
 
