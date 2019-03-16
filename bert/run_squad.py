@@ -1047,7 +1047,6 @@ def main():
                     global_step += 1
             losses_epochs.append(losses)
 
-        import csv
         with open("../debug_squad_baseV12_Adam/loss.csv", "w") as f:
             wr = csv.writer(f)
             wr.writerows(losses_epochs)

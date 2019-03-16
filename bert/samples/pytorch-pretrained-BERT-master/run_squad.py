@@ -982,12 +982,20 @@ def main():
         train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.train_batch_size)
 
         model.train()
+        import csv
+        with open("../debug_squad_base/loss.csv", "w") as f:
+            wr = csv.writer(f)
+            wr.writerows([])
+        model.train()
+        losses_epochs = []
         for _ in trange(int(args.num_train_epochs), desc="Epoch"):
+            losses = []
             for step, batch in enumerate(tqdm(train_dataloader, desc="Iteration")):
                 if n_gpu == 1:
                     batch = tuple(t.to(device) for t in batch) # multi-gpu does scattering it-self
                 input_ids, input_mask, segment_ids, start_positions, end_positions = batch
                 loss = model(input_ids, segment_ids, input_mask, start_positions, end_positions)
+                losses.append(loss.item())
                 if n_gpu > 1:
                     loss = loss.mean() # mean() to average on multi-gpu.
                 if args.gradient_accumulation_steps > 1:
@@ -1007,6 +1015,11 @@ def main():
                     optimizer.step()
                     optimizer.zero_grad()
                     global_step += 1
+            losses_epochs.append(losses)
+
+        with open("../debug_squad_base/loss.csv", "w") as f:
+            wr = csv.writer(f)
+            wr.writerows(losses_epochs)
 
     if args.do_train:
         # Save a trained model and the associated configuration
