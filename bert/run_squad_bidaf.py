@@ -480,7 +480,6 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
 
     for (example_index, example) in enumerate(all_examples):
         features = example_index_to_features[example_index]
-
         prelim_predictions = []
         # keep track of the minimum score of null start+end of position 0
         score_null = 1000000  # large and positive
@@ -605,44 +604,43 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
                 _NbestPrediction(text="empty", start_logit=0.0, end_logit=0.0))
 
         assert len(nbest) >= 1
+        if(len(nbest) != 1):
+          total_scores = []
+          best_non_null_entry = None
+          for entry in nbest:
+              total_scores.append(entry.start_logit + entry.end_logit)
+              if not best_non_null_entry:
+                  if entry.text:
+                      best_non_null_entry = entry
 
-        total_scores = []
-        best_non_null_entry = None
-        for entry in nbest:
-            total_scores.append(entry.start_logit + entry.end_logit)
-            if not best_non_null_entry:
-                if entry.text:
-                    best_non_null_entry = entry
+          probs = _compute_softmax(total_scores)
 
-        if (best_non_null_entry is None):
-            best_non_null_entry = nbest[0]
+          nbest_json = []
+          for (i, entry) in enumerate(nbest):
+              output = collections.OrderedDict()
+              output["text"] = entry.text
+              output["probability"] = probs[i]
+              output["start_logit"] = entry.start_logit
+              output["end_logit"] = entry.end_logit
+              nbest_json.append(output)
 
+          assert len(nbest_json) >= 1
 
-        probs = _compute_softmax(total_scores)
-
-        nbest_json = []
-        for (i, entry) in enumerate(nbest):
-            output = collections.OrderedDict()
-            output["text"] = entry.text
-            output["probability"] = probs[i]
-            output["start_logit"] = entry.start_logit
-            output["end_logit"] = entry.end_logit
-            nbest_json.append(output)
-
-        assert len(nbest_json) >= 1
-
-        if not version_2_with_negative:
-            all_predictions[example.qas_id] = nbest_json[0]["text"]
-        else:
-            # predict "" iff the null score - the score of best non-null > threshold
-            score_diff = score_null - best_non_null_entry.start_logit - (
-                best_non_null_entry.end_logit)
-            scores_diff_json[example.qas_id] = score_diff
-            if score_diff > null_score_diff_threshold:
-                all_predictions[example.qas_id] = ""
-            else:
-                all_predictions[example.qas_id] = best_non_null_entry.text
-                all_nbest_json[example.qas_id] = nbest_json
+          if not version_2_with_negative:
+              all_predictions[example.qas_id] = nbest_json[0]["text"]
+          #else:
+          elif (best_non_null_entry is not None):
+              # predict "" iff the null score - the score of best non-null > threshold
+              score_diff = score_null - best_non_null_entry.start_logit - (
+                  best_non_null_entry.end_logit)
+              scores_diff_json[example.qas_id] = score_diff
+              if score_diff > null_score_diff_threshold:
+                  all_predictions[example.qas_id] = ""
+              else:
+                  all_predictions[example.qas_id] = best_non_null_entry.text
+                  all_nbest_json[example.qas_id] = nbest_json
+          else:
+            print("idk")
 
     with open(output_prediction_file, "w") as writer:
         writer.write(json.dumps(all_predictions, indent=4) + "\n")
@@ -1009,7 +1007,6 @@ def main():
                 if n_gpu == 1:
                     batch = tuple(t.to(device) for t in batch) # multi-gpu does scattering it-self
                 input_ids, input_mask, segment_ids, start_positions, end_positions = batch
-
                 loss = model(args.max_seq_length, args.max_query_length,input_ids, segment_ids, input_mask, start_positions, end_positions)
                 if n_gpu > 1:
                     loss = loss.mean() # mean() to average on multi-gpu.
