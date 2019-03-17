@@ -1575,7 +1575,7 @@ class BertForQuestionAnsweringAttention(BertPreTrainedModel):
         att = self.context_question_attention(context_output,question_output,context_mask, question_mask)
         print("att--> expected batch, sequence, hidden*4", att.size())
 
-        mod, _ = self.model_layer(sequence_output) 
+        mod, _ = self.model_layer(att) 
         print("mod--> expected batch, sequence, hidden*2", mod.size())
 
         start_logits = self.att_linear_1(att) + self.mod_linear_1(mod)
