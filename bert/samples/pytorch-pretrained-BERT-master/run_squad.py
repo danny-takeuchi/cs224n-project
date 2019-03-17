@@ -1031,11 +1031,8 @@ def main():
             f.write(model_to_save.config.to_json_string())
 
         # Load a trained model and config that you have fine-tuned
-        # config = BertConfig(output_config_file)
-        # model = BertForQuestionAnswering(config)
-        # model.load_state_dict(torch.load(output_model_file))
-        model = BertForQuestionAnswering.from_pretrained(args.bert_model)
-        output_model_file = "../debug_squad_base/pytorch_model.bin"
+        config = BertConfig(output_config_file)
+        model = BertForQuestionAnswering(config)
         model.load_state_dict(torch.load(output_model_file))
     else:
         model = BertForQuestionAnswering.from_pretrained(args.bert_model)
