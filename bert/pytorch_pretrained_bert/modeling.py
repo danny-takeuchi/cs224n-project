@@ -1544,7 +1544,7 @@ class BertForQuestionAnsweringAttention(BertPreTrainedModel):
         self.model_layer_2 = nn.LSTM(input_size=2 * config.hidden_size,
                               hidden_size= config.hidden_size,
                               num_layers=1,
-                              drop_prob= config.hidden_dropout_prob)
+                              dropout= config.hidden_dropout_prob)
 
         self.att_linear_2 = nn.Linear(4 * config.hidden_size, 1)
         self.mod_linear_2 = nn.Linear(2 * config.hidden_size, 1)        
