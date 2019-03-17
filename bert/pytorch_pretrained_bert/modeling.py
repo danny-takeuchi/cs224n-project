@@ -1537,22 +1537,61 @@ class BertForQuestionAnsweringAttention(BertPreTrainedModel):
         self.qa_outputs = nn.Linear(config.hidden_size, 2)
         self.apply(self.init_bert_weights)
         self.context_question_attention = BiDAFAttention(config.hidden_size)
+        self.model_layer = nn.LSTM(input_size = config.hidden_size*4,hidden_size = config.hidden_size,num_layers =2, batch_first = True, dropout = config.hidden_dropout_prob, bidirectional = True)
+        self.att_linear_1 = nn.Linear(4 * config.hidden_size, 1)
+        self.mod_linear_1 = nn.Linear(2 * config.hidden_size, 1)
+
+        self.model_layer_2 = nn.LSTM(input_size=2 * config.hidden_size,
+                              hidden_size= config.hidden_size,
+                              num_layers=1,
+                              drop_prob= config.hidden_dropout_prob)
+
+        self.att_linear_2 = nn.Linear(4 * config.hidden_size, 1)
+        self.mod_linear_2 = nn.Linear(2 * config.hidden_size, 1)        
 
 
-    def forward(self, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None):
+    def forward(self, max_seq_length, max_query_length, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None, ):
         
         sequence_output, _ = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
-        #sequence_output = self.context_question_attention(sequence_output)
 
-        #apply attention layer 
-        #run through transformer perhaps 
+        #sequence_output is of shape (batch_size, sequence_length, hidden_size)
+        #find out where we separate the question/context hidden states (add 2 for the CLS and SEP tokens)
+        question_end_index = max_query_length + 2
+        print("question_end_index",question_end_index)
 
-        logits = self.qa_outputs(sequence_output)
+        question_output = sequence_output[:,:question_end_index,:]
+        print("question_output", question_output.size())
 
-        start_logits, end_logits = logits.split(1, dim=-1)
+        context_output = sequence_output[:,question_end_index:,:]
+        print("context_output", context_output.size())
+
+        question_mask = attention_mask[:,:question_end_index]
+        print("question_mask", question_mask.size())
+
+        context_mask = attention_mask[:,question_end_index:]
+        print("context_mask", context_mask.size())
+
+        att = self.context_question_attention(context_output,question_output,context_mask, question_mask)
+        print("att--> expected batch, sequence, hidden*4", att.size())
+
+        mod, _ = self.model_layer(sequence_output) 
+        print("mod--> expected batch, sequence, hidden*2", mod.size())
+
+        start_logits = self.att_linear_1(att) + self.mod_linear_1(mod)
+
+        mod_2 = self.model_layer_2(mod, context_mask.sum(-1))
+        print("mod2 --> expected batch, sequence, hidden*2", mod_2.size())
+
+        end_logits = self.att_linear_2(att) + self.mod_linear_2(mod_2)
+
+        #logits = self.qa_outputs(sequence_output)
+
+        #start_logits, end_logits = logits.split(1, dim=-1)
 
         start_logits = start_logits.squeeze(-1)
         end_logits = end_logits.squeeze(-1)
+
+        print(end_logits.size(),start_logits.size())
 
         if start_positions is not None and end_positions is not None:
             # If we are on multi-GPU, split add a dimension
