@@ -46,7 +46,6 @@ def writeCleanDevQuestionsJson():
                 question = a['question']
                 g.write(str(question.encode('utf-8')) + '\n')
 
-from collections import OrderedDict
 def jsonToCSV():
     import csv
     # Write submission file for Kaggle
@@ -55,8 +54,7 @@ def jsonToCSV():
         csv_writer.writerow(['Id', 'Predicted'])
 
         with open('predictions.json') as f:
-            input_data = f.read()
-            data = json.loads(input_data, object_pairs_hook=OrderedDict)
+            data = json.load(f)
             for uuid in data:
                 csv_writer.writerow([uuid, data[uuid]])
 
@@ -116,7 +114,7 @@ def AAScore(filepath):
 # writeCleanDevQuestionsJson()
 jsonToCSV()
 # writeCleanDevJson()
-filepath = "../debug_squad_base/dev_submission.csv"
+filepath = "dev_submission.csv"
 print("getAnsweredNonanswersScore: " + str(ANaScore(filepath)))
 print("getNonansweredAnswersScore: " + str(NaAScore(filepath)))
 print("WrongAnswersScore: " + str(AAScore(filepath)))
@@ -126,12 +124,12 @@ with open("loss.csv", "r") as f:
     x = f.readlines()
     for i in range(len(x)):
         x[i] = x[i].split(",")
-        # for j in range(len(x[i])):
-        #     m = re.search("([0-9]\.[0-9]{4})", x[i][j])
-        #     if m:
-        #         x[i][j] = m.group(1)
-        #     else:
-        #         x[i][j] = ""
+        for j in range(len(x[i])):
+            m = re.search("([0-9]\.[0-9]{4})", x[i][j])
+            if m:
+                x[i][j] = m.group(1)
+            else:
+                x[i][j] = ""
         x[i] = [float(j) for j in x[i] if j != ""]
 
 def plot(x, y):
@@ -140,6 +138,4 @@ def plot(x, y):
     plt.xlabel("Iteration")
     plt.show()
 
-plot([i for i in range(len(x[0]))], x[0])
-
-# plot([i for i in range(len(x[1])) if i % 50 == 0], [x[1][i] for i in range(len(x[1])) if i % 50 == 0])
+plot([i for i in range(len(x[1]))], x[1])
